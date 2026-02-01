@@ -26,6 +26,10 @@ const submissionSchema = new mongoose.Schema({
   fileUrl: {
     type: String
   },
+  content: {
+    type: String,
+    trim: true
+  },
   submittedAt: {
     type: Date,
     default: Date.now
@@ -34,6 +38,21 @@ const submissionSchema = new mongoose.Schema({
     type: String,
     enum: ['submitted', 'graded', 'late'],
     default: 'submitted'
+  },
+  marks: {
+    type: Number,
+    min: 0
+  },
+  feedback: {
+    type: String,
+    trim: true
+  },
+  gradedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  gradedAt: {
+    type: Date
   }
 }, {
   timestamps: true

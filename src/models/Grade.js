@@ -33,6 +33,22 @@ const gradeSchema = new mongoose.Schema({
     required: true,
     min: 0
   },
+  component: {
+    type: String,
+    trim: true,
+    default: 'final'
+  },
+  maxValue: {
+    type: Number,
+    min: 0,
+    default: 100
+  },
+  weight: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 100
+  },
   gradedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

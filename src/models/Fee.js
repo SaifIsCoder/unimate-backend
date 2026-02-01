@@ -41,6 +41,18 @@ const feeSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'paid', 'overdue', 'waived'],
     default: 'pending'
+  },
+  paidAt: {
+    type: Date
+  },
+  paymentReference: {
+    type: String
+  },
+  waivedAt: {
+    type: Date
+  },
+  waivedReason: {
+    type: String
   }
 }, {
   timestamps: true

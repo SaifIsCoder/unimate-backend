@@ -14,6 +14,13 @@ const academicCycleRoutes = require('./routes/academicCycleRoutes');
 const classRoutes = require('./routes/classRoutes');
 const enrollmentRoutes = require('./routes/enrollmentRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const subjectRoutes = require('./routes/subjectRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
+const assignmentRoutes = require('./routes/assignmentRoutes');
+const gradeRoutes = require('./routes/gradeRoutes');
+const feeRoutes = require('./routes/feeRoutes');
+const eventRoutes = require('./routes/eventRoutes');
+const announcementRoutes = require('./routes/announcementRoutes');
 
 // Import middleware
 const errorHandler = require('./middlewares/errorHandler');
@@ -82,6 +89,13 @@ app.use('/api/v1/academic-cycles', academicCycleRoutes);
 app.use('/api/v1/classes', classRoutes);
 app.use('/api/v1/enrollments', enrollmentRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/subjects', subjectRoutes);
+app.use('/api/v1/attendance', attendanceRoutes);
+app.use('/api/v1/assignments', assignmentRoutes);
+app.use('/api/v1/grades', gradeRoutes);
+app.use('/api/v1/fees', feeRoutes);
+app.use('/api/v1/events', eventRoutes);
+app.use('/api/v1/announcements', announcementRoutes);
 
 // 404 handler
 app.use((req, res) => {

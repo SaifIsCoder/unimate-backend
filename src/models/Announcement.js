@@ -30,7 +30,19 @@ const announcementSchema = new mongoose.Schema({
   scopeId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true
-  }
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  expiresAt: {
+    type: Date
+  },
+  readBy: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, {
   timestamps: true
 });

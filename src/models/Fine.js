@@ -32,6 +32,27 @@ const fineSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'paid', 'waived'],
     default: 'pending'
+  },
+  type: {
+    type: String,
+    enum: ['attendance', 'late_submission', 'library', 'manual'],
+    default: 'manual'
+  },
+  issuedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  paidAt: {
+    type: Date
+  },
+  paymentReference: {
+    type: String
+  },
+  waivedAt: {
+    type: Date
+  },
+  waivedReason: {
+    type: String
   }
 }, {
   timestamps: true

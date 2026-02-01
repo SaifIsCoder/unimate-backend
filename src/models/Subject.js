@@ -38,6 +38,15 @@ const subjectSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 0
+  },
+  type: {
+    type: String,
+    enum: ['theory', 'lab', 'hybrid'],
+    default: 'theory'
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

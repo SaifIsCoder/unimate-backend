@@ -43,7 +43,7 @@ const checkAIRateLimit = async (tenantId) => {
     createdAt: { $gte: oneHourAgo }
   });
 
-  // Limit: 100 requests per hour per tenant
+  // 100 requests per hour per tenant
   const MAX_REQUESTS_PER_HOUR = 100;
   
   return recentRequests < MAX_REQUESTS_PER_HOUR;

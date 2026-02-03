@@ -18,12 +18,12 @@ mongoose.connect(MONGODB_URI, {
   useUnifiedTopology: true
 })
   .then(() => {
-    console.log('✅ MongoDB connected successfully');
+    console.log('MongoDB connected successfully');
     
     // Start server
     const server = app.listen(PORT, () => {
-      console.log(`🚀 UniMate API server running on port ${PORT}`);
-      console.log(`📚 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`UniMate API server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
 
     // Graceful shutdown
@@ -50,7 +50,7 @@ mongoose.connect(MONGODB_URI, {
     });
   })
   .catch((error) => {
-    console.error('❌ MongoDB connection error:', error);
+    console.error('MongoDB connection error:', error);
     process.exit(1);
   });
 

@@ -59,7 +59,6 @@ const errorHandler = (err, req, res, next) => {
     );
   }
 
-  // Default error (programming errors)
   res.status(err.status || 500).json(formatErrorResponse({
     message: err.message || 'Internal server error',
     errorCode: ERROR_CODES.INTERNAL_ERROR

@@ -41,7 +41,6 @@ const audit = (action, entity, getEntityId = (req, res) => req.params.id || res.
             }
           });
         } catch (error) {
-          // Don't break the response if audit logging fails
           console.error('Audit logging error:', error);
         }
       });

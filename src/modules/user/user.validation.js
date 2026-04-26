@@ -52,3 +52,4 @@ export const updateUserBody = Joi.object({
   role: Joi.string().valid(ADMIN, STUDENT, TEACHER),
   is_active: Joi.boolean(),
 }).min(1);
+

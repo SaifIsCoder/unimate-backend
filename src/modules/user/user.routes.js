@@ -16,7 +16,7 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-// Self-access: any authenticated user
+// Self-access: any authenticated
 router.get("/me", validate({ query: emptyQuery }), asyncHandler(controller.getMe));
 
 // Admin-only routes

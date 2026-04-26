@@ -124,3 +124,4 @@ export const softDeleteUser = async (id) => {
 
   return user;
 };
+

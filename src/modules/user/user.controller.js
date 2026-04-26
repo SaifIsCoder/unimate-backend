@@ -30,3 +30,5 @@ export const deleteUser = async (req, res) => {
   const user = await userService.softDeleteUser(req.params.id);
   return sendSuccess(res, user);
 };
+
+

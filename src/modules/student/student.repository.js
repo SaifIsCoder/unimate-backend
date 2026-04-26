@@ -50,6 +50,7 @@ export const update = async (id, data) => {
   return result.rows[0] || null;
 };
 
+
 export const getEnrollments = async (studentId) => {
   const result = await pool.query(
     `SELECT e.*, co.semester, co.section, c.id AS course_id, c.code AS course_code, c.title AS course_title

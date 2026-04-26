@@ -18,6 +18,7 @@ const assertStudentUser = async (userId) => {
   return user;
 };
 
+
 export const createStudent = async (payload) => {
   await assertStudentUser(payload.user_id);
 

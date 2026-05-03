@@ -2,7 +2,7 @@ import * as gradesService from "./grades.service.js";
 import { sendSuccess } from "../../utils/response.js";
 
 export const submitGrade = async (req, res) => {
-  const grade = await gradesService.submitGrade(req.body);
+  const grade = await gradesService.submitGrade(req.body, req.user);
   return sendSuccess(res, grade, 201);
 };
 

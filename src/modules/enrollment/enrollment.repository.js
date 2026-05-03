@@ -20,9 +20,23 @@ export const create = async (data, client = pool) => {
   return result.rows[0];
 };
 
-export const findAll = async () => {
-  const result = await pool.query(`${SELECT_WITH_DETAILS} ORDER BY e.id DESC`);
-  return result.rows;
+export const findAll = async ({ page = 1, limit = 20 } = {}) => {
+  const offset = (page - 1) * limit;
+  const result = await pool.query(
+    `${SELECT_WITH_DETAILS} ORDER BY e.id DESC LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
+  
+  const countResult = await pool.query(`SELECT COUNT(*)::int AS total FROM enrollments`);
+  
+  return {
+    data: result.rows,
+    meta: {
+      total: countResult.rows[0].total,
+      page,
+      limit,
+    }
+  };
 };
 
 export const findById = async (id) => {

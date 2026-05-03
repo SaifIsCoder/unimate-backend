@@ -24,7 +24,8 @@ export const getRecordsBySession = async (sessionId, client = pool) => {
   const result = await client.query(
     `SELECT ar.*, s.roll_number, u.email
      FROM ${RECORDS_TABLE} ar
-     JOIN students s ON s.id = ar.student_id
+     JOIN enrollments e ON e.id = ar.enrollment_id
+     JOIN students s ON s.id = e.student_id
      JOIN users u ON u.id = s.user_id
      WHERE ar.session_id = $1`,
     [sessionId]
@@ -41,13 +42,13 @@ export const bulkUpsertRecords = async (sessionId, records, client = pool) => {
 
   for (const record of records) {
     values.push(`($${paramIndex++}, $${paramIndex++}, $${paramIndex++})`);
-    params.push(sessionId, record.student_id, record.status);
+    params.push(sessionId, record.enrollment_id, record.status);
   }
 
   const query = `
-    INSERT INTO ${RECORDS_TABLE} (session_id, student_id, status)
+    INSERT INTO ${RECORDS_TABLE} (session_id, enrollment_id, status)
     VALUES ${values.join(", ")}
-    ON CONFLICT (session_id, student_id) DO UPDATE SET status = EXCLUDED.status
+    ON CONFLICT (session_id, enrollment_id) DO UPDATE SET status = EXCLUDED.status
     RETURNING *;
   `;
 
@@ -66,7 +67,7 @@ export const getAttendanceStats = async (offeringId, client = pool) => {
   // Get student attendance counts
   const query = `
     SELECT 
-      ar.student_id,
+      e.student_id,
       s.roll_number,
       COUNT(*) FILTER (WHERE ar.status = 'present') AS present_count,
       COUNT(*) FILTER (WHERE ar.status = 'absent') AS absent_count,
@@ -74,9 +75,10 @@ export const getAttendanceStats = async (offeringId, client = pool) => {
       COUNT(*) FILTER (WHERE ar.status = 'leave') AS leave_count
     FROM ${RECORDS_TABLE} ar
     JOIN ${SESSIONS_TABLE} sess ON sess.id = ar.session_id
-    JOIN students s ON s.id = ar.student_id
+    JOIN enrollments e ON e.id = ar.enrollment_id
+    JOIN students s ON s.id = e.student_id
     WHERE sess.offering_id = $1
-    GROUP BY ar.student_id, s.roll_number
+    GROUP BY e.student_id, s.roll_number
   `;
   const result = await client.query(query, [offeringId]);
 

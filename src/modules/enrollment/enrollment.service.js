@@ -60,8 +60,8 @@ export const createEnrollment = async (payload) => {
   });
 };
 
-export const getEnrollments = async () => {
-  return enrollmentRepository.findAll();
+export const getEnrollments = async (options = { page: 1, limit: 20 }) => {
+  return enrollmentRepository.findAll(options);
 };
 
 export const getEnrollmentById = async (id) => {

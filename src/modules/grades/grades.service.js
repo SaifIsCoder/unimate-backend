@@ -3,6 +3,17 @@ import { withTransaction } from "../../utils/transaction.js";
 import * as gradesRepository from "./grades.repository.js";
 import * as offeringRepository from "../offering/offering.repository.js";
 import * as enrollmentRepository from "../enrollment/enrollment.repository.js";
+import * as teacherRepository from "../teacher/teacher.repository.js";
+
+const assertTeacherOwnership = async (user, offering) => {
+  if (user.role === "admin") return;
+  if (user.role === "teacher") {
+    const teacher = await teacherRepository.findByUserId(user.id);
+    if (!teacher || String(teacher.id) !== String(offering.teacher_id)) {
+      throw new AppError("Forbidden: You do not own this offering", 403);
+    }
+  }
+};
 
 const GP_MAP = {
   100: 4.0,
@@ -74,23 +85,35 @@ const getGradePoint = (marks) => {
   return GP_MAP[Math.floor(marks)] || 0.0;
 };
 
-export const submitGrade = async (payload) => {
+export const submitGrade = async (payload, user) => {
   return withTransaction(async (client) => {
-    // Basic checks
+    const offering = await offeringRepository.findPlainById(payload.offering_id, client);
+    if (!offering) throw new AppError("Offering not found", 404);
+
+    if (user) {
+      await assertTeacherOwnership(user, offering);
+    }
+
     const enrollment = await enrollmentRepository.findByStudentAndOffering(
       payload.student_id,
       payload.offering_id,
       client,
     );
-    if (!enrollment) {
-      throw new AppError("Student is not enrolled in this offering", 400);
+    
+    if (!enrollment || enrollment.status !== 'enrolled') {
+      throw new AppError("Student is not actively enrolled in this offering", 400);
     }
 
     if (payload.score > payload.max_score) {
       throw new AppError("Score cannot exceed max score", 400);
     }
 
-    return gradesRepository.upsertGrade(payload, client);
+    const gradeData = {
+      ...payload,
+      enrollment_id: enrollment.id,
+    };
+
+    return gradesRepository.upsertGrade(gradeData, client);
   });
 };
 

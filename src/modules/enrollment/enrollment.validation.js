@@ -7,6 +7,10 @@ export const idParams = Joi.object({
 
 export const emptyQuery = Joi.object({});
 
+export const paginationQuery = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+});
 export const createEnrollmentBody = Joi.object({
   student_id: Joi.string().uuid().required(),
   offering_id: Joi.string().uuid().required(),

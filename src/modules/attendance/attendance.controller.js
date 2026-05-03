@@ -2,7 +2,7 @@ import * as attendanceService from "./attendance.service.js";
 import { sendSuccess } from "../../utils/response.js";
 
 export const recordAttendance = async (req, res) => {
-  const result = await attendanceService.recordAttendance(req.body);
+  const result = await attendanceService.recordAttendance(req.body, req.user);
   return sendSuccess(res, result, 201);
 };
 

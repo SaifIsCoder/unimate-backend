@@ -3,6 +3,17 @@ import { withTransaction } from "../../utils/transaction.js";
 import * as attendanceRepository from "./attendance.repository.js";
 import * as enrollmentRepository from "../enrollment/enrollment.repository.js";
 import * as offeringRepository from "../offering/offering.repository.js";
+import * as teacherRepository from "../teacher/teacher.repository.js";
+
+const assertTeacherOwnership = async (user, offering) => {
+  if (user.role === "admin") return;
+  if (user.role === "teacher") {
+    const teacher = await teacherRepository.findByUserId(user.id);
+    if (!teacher || String(teacher.id) !== String(offering.teacher_id)) {
+      throw new AppError("Forbidden: You do not own this offering", 403);
+    }
+  }
+};
 
 // Validation Helper
 const assertOfferingExists = async (offeringId, client) => {
@@ -13,28 +24,40 @@ const assertOfferingExists = async (offeringId, client) => {
   return offering;
 };
 
-export const recordAttendance = async (payload) => {
+export const recordAttendance = async (payload, user) => {
   return withTransaction(async (client) => {
     const { offering_id, date, records } = payload;
-    await assertOfferingExists(offering_id, client);
+    const offering = await assertOfferingExists(offering_id, client);
+
+    if (user) {
+      await assertTeacherOwnership(user, offering);
+    }
 
     // Get all enrolled students for this offering
     const enrollments = await enrollmentRepository.findByOffering(offering_id);
-    const enrolledStudentIds = enrollments.map(e => String(e.student_id));
+    // Filter to only actively enrolled students
+    const activeEnrollments = enrollments.filter(e => e.status === 'enrolled');
+    const enrolledMap = new Map();
+    for (const e of activeEnrollments) {
+      enrolledMap.set(String(e.student_id), String(e.id));
+    }
 
     // Prepare default records (all present)
     const finalRecordsMap = new Map();
-    for (const studentId of enrolledStudentIds) {
-      finalRecordsMap.set(studentId, { student_id: studentId, status: 'present' });
+    for (const [studentId, enrollmentId] of enrolledMap.entries()) {
+      finalRecordsMap.set(studentId, { enrollment_id: enrollmentId, status: 'present' });
     }
 
     // Override with provided records (teacher only sends absent/late/leave)
     if (records && records.length > 0) {
       for (const rec of records) {
-        if (!enrolledStudentIds.includes(String(rec.student_id))) {
-          throw new AppError(`Student ${rec.student_id} is not enrolled in this offering`, 400);
+        if (!enrolledMap.has(String(rec.student_id))) {
+          throw new AppError(`Student ${rec.student_id} is not actively enrolled in this offering`, 400);
         }
-        finalRecordsMap.set(String(rec.student_id), rec);
+        finalRecordsMap.set(String(rec.student_id), {
+          enrollment_id: enrolledMap.get(String(rec.student_id)),
+          status: rec.status,
+        });
       }
     }
 

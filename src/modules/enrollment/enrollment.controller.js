@@ -7,7 +7,8 @@ export const createEnrollment = async (req, res) => {
 };
 
 export const getEnrollments = async (req, res) => {
-  const enrollments = await enrollmentService.getEnrollments();
+  const { page, limit } = req.query;
+  const enrollments = await enrollmentService.getEnrollments({ page, limit });
   return sendSuccess(res, enrollments);
 };
 

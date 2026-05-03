@@ -8,6 +8,7 @@ import * as controller from "./enrollment.controller.js";
 import {
   createEnrollmentBody,
   emptyQuery,
+  paginationQuery,
   idParams,
   updateEnrollmentBody,
 } from "./enrollment.validation.js";
@@ -23,7 +24,7 @@ router.post(
 );
 router.get(
   "/",
-  validate({ query: emptyQuery }),
+  validate({ query: paginationQuery }),
   asyncHandler(controller.getEnrollments),
 );
 router.get(

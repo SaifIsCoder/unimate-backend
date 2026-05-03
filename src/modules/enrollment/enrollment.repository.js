@@ -4,10 +4,12 @@ import { buildInsert, buildUpdate } from "../../utils/sql.helpers.js";
 const TABLE = "enrollments";
 
 const SELECT_WITH_DETAILS = `
-  SELECT e.*, s.user_id AS student_user_id, co.semester, co.section, c.id AS course_id,
+  SELECT e.*, s.user_id AS student_user_id, s.roll_number, s.department, s.batch, u.email AS student_email,
+         co.semester, co.section, c.id AS course_id,
          c.code AS course_code, c.title AS course_title
   FROM enrollments e
   JOIN students s ON s.id = e.student_id
+  JOIN users u ON u.id = s.user_id
   JOIN course_offerings co ON co.id = e.offering_id
   JOIN courses c ON c.id = co.course_id
 `;

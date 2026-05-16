@@ -40,7 +40,8 @@ export const upsertGrade = async (data, client = pool) => {
   }
 };
 
-export const findGradesByOffering = async (offeringId, client = pool) => {
+export const findGradesByOffering = async (offeringId, { page = 1, limit = 50 } = {}, client = pool) => {
+  const offset = (page - 1) * limit;
   const result = await client.query(
     `SELECT g.*, s.roll_number, u.email
      FROM ${TABLE} g
@@ -48,10 +49,23 @@ export const findGradesByOffering = async (offeringId, client = pool) => {
      JOIN students s ON s.id = e.student_id
      JOIN users u ON u.id = s.user_id
      WHERE e.offering_id = $1
-     ORDER BY s.roll_number ASC, g.assessment_type ASC`,
+     ORDER BY s.roll_number ASC, g.assessment_type ASC
+     LIMIT $2 OFFSET $3`,
+    [offeringId, limit, offset]
+  );
+
+  const countRes = await client.query(
+    `SELECT COUNT(*)::int AS total 
+     FROM ${TABLE} g
+     JOIN enrollments e ON e.id = g.enrollment_id
+     WHERE e.offering_id = $1`, 
     [offeringId]
   );
-  return result.rows;
+
+  return {
+    data: result.rows,
+    meta: { total: countRes.rows[0].total, page, limit }
+  };
 };
 
 export const findGradesByStudentAndOffering = async (studentId, offeringId, client = pool) => {
@@ -73,7 +87,11 @@ export const findTranscriptDataForStudent = async (studentId, client = pool) => 
       c.code AS course_code,
       c.title AS course_title,
       c.credit_hours,
-      c.has_practical
+      c.has_practical,
+      co.mid_weight,
+      co.sessional_weight,
+      co.final_weight,
+      co.practical_weight
     FROM enrollments e
     JOIN course_offerings co ON co.id = e.offering_id
     JOIN courses c ON c.id = co.course_id

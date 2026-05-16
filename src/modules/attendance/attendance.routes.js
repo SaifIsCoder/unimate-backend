@@ -17,13 +17,31 @@ router.post(
   asyncHandler(attendanceController.recordAttendance)
 );
 
+router.post(
+  "/sessions",
+  roleMiddleware(["admin", "teacher"]),
+  validate({ body: validation.createSessionSchema }),
+  asyncHandler(attendanceController.createSession)
+);
+
+router.get(
+  "/offering/:offeringId/sessions",
+  roleMiddleware(["admin", "teacher", "student"]),
+  validate({ params: validation.offeringIdParams }),
+  asyncHandler(attendanceController.getSessionsByOffering)
+);
+
 router.get(
   "/session/:sessionId",
+  roleMiddleware(["admin", "teacher", "student"]),
+  validate({ params: validation.sessionIdParams }),
   asyncHandler(attendanceController.getSessionRecords)
 );
 
 router.get(
   "/offering/:offeringId",
+  roleMiddleware(["admin", "teacher", "student"]),
+  validate({ params: validation.offeringIdParams, query: validation.paginationQuery }),
   asyncHandler(attendanceController.getAttendanceStats)
 );
 

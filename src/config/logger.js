@@ -1,8 +1,24 @@
-const createLog =
-  (level) =>
-  (...args) =>
-    console[level](`[${level.toUpperCase()}]`, ...args);
+import pino from "pino";
 
-export const info = createLog("log");
-export const warn = createLog("warn");
-export const error = createLog("error");
+const isProduction = process.env.NODE_ENV === "production";
+
+const logger = pino({
+  level: process.env.LOG_LEVEL || "info",
+  transport: isProduction
+    ? undefined
+    : {
+        target: "pino-pretty",
+        options: {
+          colorize: true,
+          translateTime: "SYS:standard",
+          ignore: "pid,hostname",
+        },
+      },
+});
+
+export const info = (...args) => logger.info(...args);
+export const warn = (...args) => logger.warn(...args);
+export const error = (...args) => logger.error(...args);
+export const debug = (...args) => logger.debug(...args);
+
+export default logger;

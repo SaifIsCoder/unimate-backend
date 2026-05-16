@@ -1,8 +1,9 @@
 import jwt from "jsonwebtoken";
 import env from "../config/env.js";
 import { AppError } from "../utils/app-error.js";
+import * as authRepository from "../modules/auth/auth.repository.js";
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   const header = req.headers.authorization || "";
   const [scheme, token] = header.split(" ");
 
@@ -12,9 +13,20 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const payload = jwt.verify(token, env.jwtSecret);
+    
+    // Check if user still exists and is active
+    const user = await authRepository.findUserById(payload.id);
+    if (!user) {
+      return next(new AppError("User account no longer exists", 401));
+    }
+
+    if (!user.is_active) {
+      return next(new AppError("Your account has been deactivated", 403));
+    }
+
     req.user = {
-      id: payload.id,
-      role: payload.role,
+      id: user.id,
+      role: user.role,
     };
 
     return next();

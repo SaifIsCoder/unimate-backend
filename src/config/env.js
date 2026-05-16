@@ -14,6 +14,8 @@ const env = {
     password: process.env.DB_PASSWORD || "",
   },
   jwtSecret: process.env.JWT_SECRET || "change-me",
+  firebaseCredentialsPath: process.env.FIREBASE_CREDENTIALS_PATH,
+  frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
 };
 
 export default env;

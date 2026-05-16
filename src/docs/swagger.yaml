@@ -1,0 +1,712 @@
+openapi: 3.0.0
+info:
+  title: UniMate API Documentation
+  version: 1.0.0
+  description: Production API documentation for the UniMate Academic Management System.
+servers:
+  - url: /api/v1
+    description: Current API Version
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              type: string
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Users
+  - name: Students
+  - name: Teachers
+  - name: Courses
+  - name: Offerings
+  - name: Enrollments
+  - name: Schedule
+  - name: Attendance
+  - name: Assignments
+  - name: Grades
+  - name: Announcements
+  - name: Notifications
+  - name: Community
+  - name: Admins
+
+paths:
+  # ==============================
+  # AUTH MODULE
+  # ==============================
+  /auth/login/{role}:
+    post:
+      tags: [Auth]
+      summary: Login as a specific role
+      security: []
+      parameters:
+        - in: path
+          name: role
+          required: true
+          schema:
+            type: string
+            enum: [admin, student, teacher]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Login successful
+        "401":
+          description: Invalid credentials
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: One-time password reset (student or teacher)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        "200":
+          description: Password reset successful
+
+  # ==============================
+  # USERS MODULE
+  # ==============================
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current authenticated user profile
+      responses:
+        "200":
+          description: Current user data
+  /users:
+    get:
+      tags: [Users]
+      summary: Get all users (Admin only)
+      responses:
+        "200":
+          description: List of users
+    post:
+      tags: [Users]
+      summary: Create a base user account (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+                role: { type: string, enum: [ADMIN, STUDENT, TEACHER] }
+      responses:
+        "201":
+          description: User created
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Get user by ID
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: User data }
+    patch:
+      tags: [Users]
+      summary: Update a user
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: User updated }
+    delete:
+      tags: [Users]
+      summary: Delete a user
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: User deleted }
+
+  # ==============================
+  # STUDENTS MODULE
+  # ==============================
+  /students/me:
+    get:
+      tags: [Students]
+      summary: Get logged-in student's profile
+      responses:
+        "200": { description: Student profile data }
+  /students/me/enrollments:
+    get:
+      tags: [Students]
+      summary: Get logged-in student's enrollments
+      responses:
+        "200": { description: List of enrollments }
+  /students:
+    get:
+      tags: [Students]
+      summary: Get all students (Admin Only)
+      responses:
+        "200": { description: List of students }
+    post:
+      tags: [Students]
+      summary: Create a student profile (Admin Only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string, format: uuid }
+                roll_number: { type: string }
+                department: { type: string }
+                batch: { type: integer }
+      responses:
+        "201": { description: Student profile created }
+  /students/{id}/enrollments:
+    get:
+      tags: [Students]
+      summary: Get specific student's enrollments
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Student enrollments }
+  /students/{id}:
+    get:
+      tags: [Students]
+      summary: Get student by ID
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Student data }
+    patch:
+      tags: [Students]
+      summary: Update a student
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Student updated }
+    delete:
+      tags: [Students]
+      summary: Delete a student
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Student deleted }
+
+  # ==============================
+  # TEACHERS MODULE
+  # ==============================
+  /teachers/me:
+    get:
+      tags: [Teachers]
+      summary: Get logged-in teacher's profile
+      responses:
+        "200": { description: Teacher profile data }
+  /teachers/me/offerings:
+    get:
+      tags: [Teachers]
+      summary: Get logged-in teacher's course offerings
+      responses:
+        "200": { description: Teacher course offerings }
+  /teachers:
+    get:
+      tags: [Teachers]
+      summary: Get all teachers
+      responses:
+        "200": { description: List of teachers }
+    post:
+      tags: [Teachers]
+      summary: Create a teacher profile
+      responses:
+        "201": { description: Teacher profile created }
+  /teachers/{id}/offerings:
+    get:
+      tags: [Teachers]
+      summary: Get specific teacher's offerings
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Teacher offerings }
+  /teachers/{id}:
+    get:
+      tags: [Teachers]
+      summary: Get teacher by ID
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Teacher data }
+    patch:
+      tags: [Teachers]
+      summary: Update a teacher
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Teacher updated }
+    delete:
+      tags: [Teachers]
+      summary: Delete a teacher
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Teacher deleted }
+
+  # ==============================
+  # COURSES MODULE
+  # ==============================
+  /courses:
+    get:
+      tags: [Courses]
+      summary: List all courses
+      responses:
+        "200": { description: Array of courses }
+    post:
+      tags: [Courses]
+      summary: Create a new course (Admin Only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+                title: { type: string }
+                credit_hours: { type: integer }
+                department: { type: string }
+      responses:
+        "201": { description: Course created }
+  /courses/{id}:
+    get:
+      tags: [Courses]
+      summary: Get course by ID
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Course details }
+    patch:
+      tags: [Courses]
+      summary: Update a course
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Course updated }
+    delete:
+      tags: [Courses]
+      summary: Delete a course
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Course deleted }
+
+  # ==============================
+  # OFFERINGS MODULE
+  # ==============================
+  /offerings:
+    get:
+      tags: [Offerings]
+      summary: List course offerings
+      parameters:
+        - in: query
+          name: semester
+          schema: { type: string }
+        - in: query
+          name: course_id
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Array of offerings }
+    post:
+      tags: [Offerings]
+      summary: Create an offering
+      responses:
+        "201": { description: Offering created }
+  /offerings/{id}:
+    get:
+      tags: [Offerings]
+      summary: Get offering by ID
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Offering data }
+    patch:
+      tags: [Offerings]
+      summary: Update offering
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Offering updated }
+    delete:
+      tags: [Offerings]
+      summary: Delete offering
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Offering deleted }
+
+  # ==============================
+  # ENROLLMENTS MODULE
+  # ==============================
+  /enrollments:
+    get:
+      tags: [Enrollments]
+      summary: List all enrollments
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        "200": { description: Paginated enrollments }
+    post:
+      tags: [Enrollments]
+      summary: Create an enrollment
+      responses:
+        "201": { description: Enrollment successful }
+  /enrollments/student/{studentId}:
+    get:
+      tags: [Enrollments]
+      summary: Get enrollments by student
+      parameters: [{ in: path, name: studentId, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Student enrollments }
+  /enrollments/offering/{offeringId}:
+    get:
+      tags: [Enrollments]
+      summary: Get enrollments by offering
+      parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Offering enrollments }
+  /enrollments/{id}:
+    get:
+      tags: [Enrollments]
+      summary: Get enrollment by ID
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Enrollment details }
+    patch:
+      tags: [Enrollments]
+      summary: Update enrollment
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Enrollment updated }
+    delete:
+      tags: [Enrollments]
+      summary: Delete enrollment
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Enrollment deleted }
+
+  # ==============================
+  # SCHEDULE MODULE
+  # ==============================
+  /schedules:
+    post:
+      tags: [Schedule]
+      summary: Create a schedule
+      responses:
+        "201": { description: Schedule created }
+  /schedules/offering/{offeringId}:
+    get:
+      tags: [Schedule]
+      summary: Get schedules by offering
+      parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Schedules list }
+  /schedules/{id}:
+    delete:
+      tags: [Schedule]
+      summary: Delete schedule
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Schedule deleted }
+  /schedules/exceptions:
+    post:
+      tags: [Schedule]
+      summary: Create schedule exception
+      responses:
+        "201": { description: Exception created }
+  /schedules/offering/{offeringId}/exceptions:
+    get:
+      tags: [Schedule]
+      summary: Get exceptions by offering
+      parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Exceptions list }
+  /schedules/exceptions/{id}:
+    delete:
+      tags: [Schedule]
+      summary: Delete schedule exception
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Exception deleted }
+
+  # ==============================
+  # ATTENDANCE MODULE
+  # ==============================
+  /attendance:
+    post:
+      tags: [Attendance]
+      summary: Record attendance
+      responses:
+        "201": { description: Attendance recorded }
+  /attendance/session/{sessionId}:
+    get:
+      tags: [Attendance]
+      summary: Get attendance for session
+      parameters: [{ in: path, name: sessionId, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Session attendance records }
+  /attendance/offering/{offeringId}:
+    get:
+      tags: [Attendance]
+      summary: Get attendance stats for offering
+      parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Offering attendance stats }
+
+  # ==============================
+  # ASSIGNMENTS MODULE
+  # ==============================
+  /assignments:
+    post:
+      tags: [Assignments]
+      summary: Create an assignment
+      responses:
+        "201": { description: Assignment created }
+  /assignments/offering/{offeringId}:
+    get:
+      tags: [Assignments]
+      summary: Get assignments by offering
+      parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: List of assignments }
+  /assignments/{id}:
+    patch:
+      tags: [Assignments]
+      summary: Update assignment
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Assignment updated }
+    delete:
+      tags: [Assignments]
+      summary: Delete assignment
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Assignment deleted }
+  /assignments/{id}/done:
+    patch:
+      tags: [Assignments]
+      summary: Mark assignment as done
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Assignment marked as done }
+
+  # ==============================
+  # GRADES MODULE
+  # ==============================
+  /grades:
+    post:
+      tags: [Grades]
+      summary: Submit a grade
+      responses:
+        "201": { description: Grade submitted }
+  /grades/offering/{offeringId}:
+    get:
+      tags: [Grades]
+      summary: Get grades by offering
+      parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Grades list }
+  /grades/student/{studentId}/offering/{offeringId}/calculation:
+    get:
+      tags: [Grades]
+      summary: Calculate course grade
+      parameters:
+        - in: path
+          name: studentId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: offeringId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Calculated grade }
+  /grades/student/{studentId}/transcript:
+    get:
+      tags: [Grades]
+      summary: Get student transcript
+      parameters: [{ in: path, name: studentId, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Student transcript }
+
+  # ==============================
+  # ANNOUNCEMENTS MODULE
+  # ==============================
+  /announcements:
+    post:
+      tags: [Announcements]
+      summary: Create an announcement
+      responses:
+        "201": { description: Announcement created }
+    get:
+      tags: [Announcements]
+      summary: Get all announcements
+      responses:
+        "200": { description: List of announcements }
+  /announcements/{id}:
+    patch:
+      tags: [Announcements]
+      summary: Update announcement
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Announcement updated }
+    delete:
+      tags: [Announcements]
+      summary: Delete announcement
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Announcement deleted }
+
+  # ==============================
+  # NOTIFICATIONS MODULE
+  # ==============================
+  /notifications/token:
+    post:
+      tags: [Notifications]
+      summary: Register notification token
+      responses:
+        "201": { description: Token registered }
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get user notifications
+      responses:
+        "200": { description: Notifications list }
+  /notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark notification as read
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Notification marked read }
+
+  # ==============================
+  # ADMINS MODULE
+  # ==============================
+  /admins/me:
+    get:
+      tags: [Admins]
+      summary: Get logged-in admin's profile
+      responses:
+        "200": { description: Admin data }
+  /admins:
+    get:
+      tags: [Admins]
+      summary: Get all admins
+      responses:
+        "200": { description: Admin list }
+  /admins/{id}:
+    get:
+      tags: [Admins]
+      summary: Get admin by ID
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Admin data }
+    patch:
+      tags: [Admins]
+      summary: Update an admin
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Admin updated }
+    delete:
+      tags: [Admins]
+      summary: Delete an admin
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Admin deleted }
+
+  # ==============================
+  # COMMUNITY MODULE
+  # ==============================
+  /community/posts:
+    post:
+      tags: [Community]
+      summary: Create a post
+      responses:
+        "201": { description: Post created }
+    get:
+      tags: [Community]
+      summary: Get community feed
+      responses:
+        "200": { description: List of posts }
+  /community/posts/{id}:
+    get:
+      tags: [Community]
+      summary: Get post by ID
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Post data }
+    patch:
+      tags: [Community]
+      summary: Update a post
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Post updated }
+    delete:
+      tags: [Community]
+      summary: Delete a post
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Post deleted }
+  /community/posts/{id}/comments:
+    post:
+      tags: [Community]
+      summary: Create a comment
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "201": { description: Comment created }
+  /community/comments/{id}:
+    patch:
+      tags: [Community]
+      summary: Update a comment
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Comment updated }
+    delete:
+      tags: [Community]
+      summary: Delete a comment
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Comment deleted }
+  /community/posts/{id}/like:
+    post:
+      tags: [Community]
+      summary: Like a post
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Post liked }
+    delete:
+      tags: [Community]
+      summary: Unlike a post
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Post unliked }

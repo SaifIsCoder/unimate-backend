@@ -12,5 +12,12 @@ export const loginBody = Joi.object({
 
 // One-time password reset (student or teacher)
 export const resetPasswordBody = Joi.object({
-  password: Joi.string().min(8).max(128).required(),
+  password: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])"))
+    .message(
+      "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*)",
+    )
+    .required(),
 });

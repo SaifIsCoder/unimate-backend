@@ -7,17 +7,18 @@ export const submitGrade = async (req, res) => {
 };
 
 export const getGradesByOffering = async (req, res) => {
-  const grades = await gradesService.getGradesByOffering(req.params.offeringId);
-  return sendSuccess(res, grades);
+  const { page, limit } = req.query;
+  const result = await gradesService.getGradesByOffering(req.params.offeringId, req.user, { page, limit });
+  return sendSuccess(res, result);
 };
 
 export const calculateCourseGrade = async (req, res) => {
   const { studentId, offeringId } = req.params;
-  const gradeCalc = await gradesService.calculateCourseGrade(studentId, offeringId);
+  const gradeCalc = await gradesService.calculateCourseGrade(studentId, offeringId, req.user);
   return sendSuccess(res, gradeCalc);
 };
 
 export const getStudentTranscript = async (req, res) => {
-  const transcript = await gradesService.getStudentTranscript(req.params.studentId);
+  const transcript = await gradesService.getStudentTranscript(req.params.studentId, req.user);
   return sendSuccess(res, transcript);
 };

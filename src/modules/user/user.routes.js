@@ -1,5 +1,5 @@
 import express from "express";
-import { ADMIN } from "../../constants/roles.js";
+import { ADMIN, SUPER_ADMIN } from "../../constants/roles.js";
 import authMiddleware from "../../middlewares/auth.middleware.js";
 import roleMiddleware from "../../middlewares/role.middleware.js";
 import validate from "../../middlewares/validate.middleware.js";
@@ -19,8 +19,8 @@ router.use(authMiddleware);
 // Self-access: any authenticated
 router.get("/me", validate({ query: emptyQuery }), asyncHandler(controller.getMe));
 
-// Admin-only routes
-router.use(roleMiddleware([ADMIN]));
+// Admin & Super Admin routes
+router.use(roleMiddleware([ADMIN, SUPER_ADMIN]));
 
 router.post(
   "/",

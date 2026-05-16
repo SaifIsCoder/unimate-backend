@@ -35,3 +35,7 @@ export const updateTeacher = async (req, res) => {
   const teacher = await teacherService.updateTeacher(req.params.id, req.body);
   return sendSuccess(res, teacher);
 };
+export const deleteTeacher = async (req, res) => {
+  await teacherService.deleteTeacher(req.params.id);
+  return sendSuccess(res, null, "Teacher profile deleted successfully");
+};

@@ -20,27 +20,31 @@ export const create = async (data, client = pool) => {
   return result.rows[0];
 };
 
-export const findAll = async ({ page = 1, limit = 20 } = {}) => {
+export const findAll = async ({ page = 1, limit = 20 } = {}, client = pool) => {
   const offset = (page - 1) * limit;
-  const result = await pool.query(
+  const result = await client.query(
     `${SELECT_WITH_DETAILS} ORDER BY e.id DESC LIMIT $1 OFFSET $2`,
-    [limit, offset]
+    [limit, offset],
   );
-  
-  const countResult = await pool.query(`SELECT COUNT(*)::int AS total FROM enrollments`);
-  
+
+  const countResult = await client.query(
+    `SELECT COUNT(*)::int AS total FROM enrollments`,
+  );
+
   return {
     data: result.rows,
     meta: {
       total: countResult.rows[0].total,
       page,
       limit,
-    }
+    },
   };
 };
 
-export const findById = async (id) => {
-  const result = await pool.query(`${SELECT_WITH_DETAILS} WHERE e.id = $1`, [id]);
+export const findById = async (id, client = pool) => {
+  const result = await client.query(`${SELECT_WITH_DETAILS} WHERE e.id = $1`, [
+    id,
+  ]);
   return result.rows[0] || null;
 };
 
@@ -69,24 +73,54 @@ export const countActiveByOffering = async (offeringId, client = pool) => {
   return result.rows[0].total;
 };
 
-export const findByStudent = async (studentId) => {
-  const result = await pool.query(
+export const findByStudent = async (
+  studentId,
+  { page = 1, limit = 20 } = {},
+  client = pool,
+) => {
+  const offset = (page - 1) * limit;
+  const result = await client.query(
     `${SELECT_WITH_DETAILS}
      WHERE e.student_id = $1
-     ORDER BY e.id DESC`,
-    [studentId]
+     ORDER BY e.id DESC
+     LIMIT $2 OFFSET $3`,
+    [studentId, limit, offset],
   );
-  return result.rows;
+
+  const countRes = await client.query(
+    `SELECT COUNT(*)::int AS total FROM ${TABLE} WHERE student_id = $1`,
+    [studentId],
+  );
+
+  return {
+    data: result.rows,
+    meta: { total: countRes.rows[0].total, page, limit },
+  };
 };
 
-export const findByOffering = async (offeringId) => {
-  const result = await pool.query(
+export const findByOffering = async (
+  offeringId,
+  { page = 1, limit = 50 } = {},
+  client = pool,
+) => {
+  const offset = (page - 1) * limit;
+  const result = await client.query(
     `${SELECT_WITH_DETAILS}
      WHERE e.offering_id = $1
-     ORDER BY e.id DESC`,
-    [offeringId]
+     ORDER BY e.id DESC
+     LIMIT $2 OFFSET $3`,
+    [offeringId, limit, offset],
   );
-  return result.rows;
+
+  const countRes = await client.query(
+    `SELECT COUNT(*)::int AS total FROM ${TABLE} WHERE offering_id = $1`,
+    [offeringId],
+  );
+
+  return {
+    data: result.rows,
+    meta: { total: countRes.rows[0].total, page, limit },
+  };
 };
 
 export const update = async (id, data, client = pool) => {
@@ -95,7 +129,10 @@ export const update = async (id, data, client = pool) => {
   return result.rows[0] || null;
 };
 
-export const remove = async (id) => {
-  const result = await pool.query(`DELETE FROM ${TABLE} WHERE id = $1 RETURNING *`, [id]);
+export const remove = async (id, client = pool) => {
+  const result = await client.query(
+    `DELETE FROM ${TABLE} WHERE id = $1 RETURNING *`,
+    [id],
+  );
   return result.rows[0] || null;
 };

@@ -19,25 +19,28 @@ router.post(
 
 router.get(
   "/offering/:offeringId",
+  validate({ params: validation.offeringIdParams }),
   asyncHandler(assignmentController.getAssignmentsByOffering)
 );
 
 router.patch(
   "/:id",
   roleMiddleware(["admin", "teacher"]),
-  validate({ body: validation.updateAssignmentSchema }),
+  validate({ params: validation.idParams, body: validation.updateAssignmentSchema }),
   asyncHandler(assignmentController.updateAssignment)
 );
 
 router.patch(
   "/:id/done",
   roleMiddleware(["admin", "teacher"]),
+  validate({ params: validation.idParams }),
   asyncHandler(assignmentController.markAsDone)
 );
 
 router.delete(
   "/:id",
   roleMiddleware(["admin", "teacher"]),
+  validate({ params: validation.idParams }),
   asyncHandler(assignmentController.deleteAssignment)
 );
 

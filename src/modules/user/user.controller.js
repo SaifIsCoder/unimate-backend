@@ -2,7 +2,7 @@ import * as userService from "./user.service.js";
 import { sendSuccess } from "../../utils/response.js";
 
 export const createUser = async (req, res) => {
-  const user = await userService.createUser(req.body);
+  const user = await userService.createUser(req.body, req.user);
   return sendSuccess(res, user, 201);
 };
 

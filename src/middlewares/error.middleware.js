@@ -16,14 +16,27 @@ export default (err, req, res, next) => {
 
   const isKnownDbError = Boolean(dbErrorMessages[err.code]);
   const statusCode = err.statusCode || (isKnownDbError ? 400 : 500);
-  const message =
-    dbErrorMessages[err.code] ||
-    (statusCode >= 500 ? "Internal server error" : err.message) ||
-    "Internal server error";
+  
+  // Production safe message
+  const isOperational = err.isOperational || isKnownDbError;
+  const message = isOperational ? (dbErrorMessages[err.code] || err.message) : "Internal server error";
 
-  if (statusCode >= 500) {
-    logger.error(err.stack || err.message || err);
+  // Development Logging
+  if (statusCode >= 500 || !isOperational) {
+    logger.error(`[${req.method}] ${req.url} - ${statusCode}: ${err.message}`);
+    if (err.stack) {
+      logger.error(err.stack);
+    }
+  } else {
+    // For expected 4xx errors, just a simple one-line warning
+    logger.warn(`[${req.method}] ${req.url} - ${statusCode}: ${err.message}`);
   }
 
-  return sendError(res, message, statusCode);
+  return sendError(
+    res,
+    message,
+    statusCode,
+    isOperational ? "OperationalError" : "InternalError",
+    err.code
+  );
 };

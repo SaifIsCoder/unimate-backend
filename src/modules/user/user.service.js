@@ -1,44 +1,35 @@
 import bcrypt from "bcryptjs";
-import { STUDENT, TEACHER } from "../../constants/roles.js";
+import { SUPER_ADMIN, STUDENT, TEACHER, ADMIN } from "../../constants/roles.js";
 import { AppError } from "../../utils/app-error.js";
 import { omitUndefined } from "../../utils/sql.helpers.js";
+import { withTransaction } from "../../utils/transaction.js";
 import * as userRepository from "./user.repository.js";
-import { pool } from "../../config/db.js";
 import * as studentRepository from "../student/student.repository.js";
 import * as teacherRepository from "../teacher/teacher.repository.js";
+import * as adminRepository from "../admins/admin.repository.js";
 
 const sanitizeUser = (user) => {
-  if (!user) {
-    return null;
-  }
-
+  if (!user) return null;
   const { password_hash, ...safeUser } = user;
   return safeUser;
 };
 
-export const createUser = async (payload) => {
-  const client = await pool.connect();
+export const createUser = async (payload, requester) => {
+  // Permission Check: Only SUPER_ADMIN can create ADMIN or SUPER_ADMIN
+  if (
+    [ADMIN, SUPER_ADMIN].includes(payload.role) &&
+    requester.role !== SUPER_ADMIN
+  ) {
+    throw new AppError("Only super admins can create admin accounts", 403);
+  }
 
-  try {
-    await client.query("BEGIN");
-
+  return withTransaction(async (client) => {
     const existingUser = await userRepository.findByEmail(payload.email);
-
     if (existingUser) {
       throw new AppError("Email is already in use", 409);
     }
 
-    // Initial credential becomes the password:
-    //   student  → roll_number
-    //   teacher  → employee_id
-    //   admin    → provided password
-    const initialCredential =
-      payload.role === STUDENT ? payload.roll_number :
-      payload.role === TEACHER ? payload.employee_id :
-      payload.password;
-
-    const passwordHash = await bcrypt.hash(initialCredential, 12);
-
+    const passwordHash = await bcrypt.hash(payload.password, 12);
 
     const user = await userRepository.createWithClient(client, {
       email: payload.email,
@@ -52,27 +43,24 @@ export const createUser = async (payload) => {
         user_id: user.id,
         roll_number: payload.roll_number,
         batch: payload.batch,
-        department: payload.department,
+        department_id: payload.department_id,
       }));
-    }
-
-    if (payload.role === TEACHER) {
+    } else if (payload.role === TEACHER) {
       await teacherRepository.createWithClient(client, omitUndefined({
         user_id: user.id,
         employee_id: payload.employee_id,
-        department: payload.department,
+        department_id: payload.department_id,
+      }));
+    } else if (payload.role === ADMIN || payload.role === SUPER_ADMIN) {
+      await adminRepository.createWithClient(client, omitUndefined({
+        user_id: user.id,
+        admin_id: payload.admin_id,
+        department_id: payload.department_id,
       }));
     }
 
-    await client.query("COMMIT");
-
     return sanitizeUser(user);
-  } catch (err) {
-    await client.query("ROLLBACK");
-    throw err;
-  } finally {
-    client.release();
-  }
+  });
 };
 
 export const getUsers = async () => {

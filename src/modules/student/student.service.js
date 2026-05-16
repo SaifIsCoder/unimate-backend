@@ -46,9 +46,7 @@ export const getStudentById = async (id) => {
 };
 
 export const getStudentByUserId = async (userId) => {
-  console.log("service",userId);
   const student = await studentRepository.findByUserId(userId);
-  console.log("service",student);
   if (!student) {
     throw new AppError("Student profile not found", 404);
   }
@@ -64,6 +62,10 @@ export const getStudentEnrollments = async (id) => {
   }
 
   return studentRepository.getEnrollments(id);
+};
+
+export const getStudentsBySemester = async (semester) => {
+  return studentRepository.findBySemester(semester);
 };
 
 export const getStudentEnrollmentsByUserId = async (userId) => {
@@ -89,4 +91,13 @@ export const updateStudent = async (id, payload) => {
 
   const data = omitUndefined(payload);
   return studentRepository.update(id, data);
+};
+export const deleteStudent = async (id) => {
+  const student = await studentRepository.remove(id);
+
+  if (!student) {
+    throw new AppError("Student profile not found", 404);
+  }
+
+  return student;
 };

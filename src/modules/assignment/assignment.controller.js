@@ -7,7 +7,10 @@ export const createAssignment = async (req, res) => {
 };
 
 export const getAssignmentsByOffering = async (req, res) => {
-  const assignments = await assignmentService.getAssignmentsByOffering(req.params.offeringId);
+  const assignments = await assignmentService.getAssignmentsByOffering(
+    req.params.offeringId,
+    req.user
+  );
   return sendSuccess(res, assignments);
 };
 

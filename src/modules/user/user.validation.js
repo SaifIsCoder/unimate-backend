@@ -1,5 +1,5 @@
 import Joi from "joi";
-import { ADMIN, STUDENT, TEACHER } from "../../constants/roles.js";
+import { SUPER_ADMIN, ADMIN, STUDENT, TEACHER } from "../../constants/roles.js";
 
 export const idParams = Joi.object({
   id: Joi.string().uuid().required(),
@@ -9,15 +9,10 @@ export const emptyQuery = Joi.object({});
 
 export const createUserBody = Joi.object({
   email: Joi.string().trim().lowercase().email().required(),
-  role: Joi.string().valid(ADMIN, STUDENT, TEACHER).required(),
+  role: Joi.string().valid(SUPER_ADMIN, ADMIN, STUDENT, TEACHER).required(),
   is_active: Joi.boolean(),
 
-  // Password: required for admin, not accepted for student/teacher
-  password: Joi.when("role", {
-    is: ADMIN,
-    then: Joi.string().min(8).max(128).required(),
-    otherwise: Joi.forbidden(),
-  }),
+  password: Joi.string().min(8).max(128).required(),
 
   // Student profile fields
   roll_number: Joi.when("role", {
@@ -38,10 +33,16 @@ export const createUserBody = Joi.object({
     otherwise: Joi.forbidden(),
   }),
 
-  // Shared optional profile field
-  department: Joi.when("role", {
-    is: Joi.valid(STUDENT, TEACHER),
-    then: Joi.string().trim(),
+  admin_id: Joi.when("role", {
+    is: Joi.valid(ADMIN, SUPER_ADMIN),
+    then: Joi.string().trim().required(),
+    otherwise: Joi.forbidden(),
+  }),
+
+  // Shared profile field
+  department_id: Joi.when("role", {
+    is: Joi.valid(STUDENT, TEACHER, ADMIN, SUPER_ADMIN),
+    then: Joi.number().integer().required(),
     otherwise: Joi.forbidden(),
   }),
 });

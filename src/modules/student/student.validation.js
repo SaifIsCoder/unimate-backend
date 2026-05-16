@@ -14,7 +14,6 @@ export const createStudentBody = Joi.object({
 });
 
 export const updateStudentBody = Joi.object({
-  user_id: Joi.string().uuid(),
   roll_number: Joi.string().trim().min(2).max(50),
   department: Joi.string().trim().max(120).allow(null, ""),
   batch: Joi.number().integer().min(1900).max(2200).allow(null),

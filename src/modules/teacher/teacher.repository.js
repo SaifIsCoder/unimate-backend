@@ -17,9 +17,10 @@ export const createWithClient = async (client, data) => {
 
 export const findAll = async () => {
   const result = await pool.query(
-    `SELECT t.*, u.email, u.role
+    `SELECT t.*, u.email, u.role, d.name AS department_name, d.code AS department_code
      FROM teachers t
      JOIN users u ON u.id = t.user_id
+     LEFT JOIN departments d ON d.id = t.department_id
      ORDER BY t.id DESC`
   );
   return result.rows;
@@ -41,6 +42,14 @@ export const findByUserId = async (userId) => {
   return result.rows[0] || null;
 };
 
+export const findByDepartmentId = async (departmentId, client = pool) => {
+  const result = await client.query(
+    `SELECT * FROM ${TABLE} WHERE department_id = $1`,
+    [departmentId],
+  );
+  return result.rows;
+};
+
 export const update = async (id, data) => {
   const query = buildUpdate(TABLE, id, data);
   const result = await pool.query(query.text, query.values);
@@ -57,4 +66,11 @@ export const getOfferings = async (teacherId) => {
     [teacherId]
   );
   return result.rows;
+};
+export const remove = async (id) => {
+  const result = await pool.query(
+    `DELETE FROM ${TABLE} WHERE id = $1 RETURNING *`,
+    [id]
+  );
+  return result.rows[0] || null;
 };

@@ -88,3 +88,12 @@ export const updateTeacher = async (id, payload) => {
   const data = omitUndefined(payload);
   return teacherRepository.update(id, data);
 };
+export const deleteTeacher = async (id) => {
+  const teacher = await teacherRepository.remove(id);
+
+  if (!teacher) {
+    throw new AppError("Teacher profile not found", 404);
+  }
+
+  return teacher;
+};

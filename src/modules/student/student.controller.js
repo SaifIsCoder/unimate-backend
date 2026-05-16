@@ -38,3 +38,13 @@ export const updateStudent = async (req, res) => {
   return sendSuccess(res, student);
 };
 
+export const deleteStudent = async (req, res) => {
+  await studentService.deleteStudent(req.params.id);
+  return sendSuccess(res, null, "Student profile deleted successfully");
+};
+
+export const getStudentsBySemester = async (req, res) => {
+  const { semester } = req.params;
+  const students = await studentService.getStudentsBySemester(semester);
+  return sendSuccess(res, students);
+};

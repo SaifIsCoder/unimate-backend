@@ -5,9 +5,13 @@ export const sendSuccess = (res, data = null, statusCode = 200) => {
   });
 };
 
-export const sendError = (res, message = "Something went wrong", statusCode = 500) => {
+export const sendError = (res, message = "Something went wrong", statusCode = 500, type = "InternalError", code = undefined) => {
   return res.status(statusCode).json({
     success: false,
-    message,
+    error: {
+      message,
+      type,
+      code,
+    },
   });
 };

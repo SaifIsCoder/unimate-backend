@@ -5,6 +5,7 @@ import { withTransaction } from "../../utils/transaction.js";
 import * as enrollmentRepository from "./enrollment.repository.js";
 import * as offeringRepository from "../offering/offering.repository.js";
 import * as studentRepository from "../student/student.repository.js";
+import { logAudit } from "../../utils/audit.js";
 
 const ACTIVE_ENROLLMENT_STATUSES = [ENROLLED];
 
@@ -28,7 +29,7 @@ const assertOfferingExists = async (offeringId, client, options = {}) => {
   return offering;
 };
 
-export const createEnrollment = async (payload) => {
+export const createEnrollment = async (payload, actor) => {
   return withTransaction(async (client) => {
     await assertStudentExists(payload.student_id);
     const offering = await assertOfferingExists(payload.offering_id, client, { forUpdate: true });
@@ -49,7 +50,7 @@ export const createEnrollment = async (payload) => {
       throw new AppError("Offering capacity has been reached", 409);
     }
 
-    return enrollmentRepository.create(
+    const result = await enrollmentRepository.create(
       {
         student_id: payload.student_id,
         offering_id: payload.offering_id,
@@ -57,6 +58,15 @@ export const createEnrollment = async (payload) => {
       },
       client
     );
+
+    logAudit({
+      action: "ENROLLMENT_CREATED",
+      actorId: actor?.id,
+      targetId: result.id,
+      metadata: { studentId: payload.student_id, offeringId: payload.offering_id }
+    }, `Student ${payload.student_id} enrolled in offering ${payload.offering_id}`);
+
+    return result;
   });
 };
 
@@ -74,19 +84,19 @@ export const getEnrollmentById = async (id) => {
   return enrollment;
 };
 
-export const getEnrollmentsByStudent = async (studentId) => {
+export const getEnrollmentsByStudent = async (studentId, options) => {
   await assertStudentExists(studentId);
 
-  return enrollmentRepository.findByStudent(studentId);
+  return enrollmentRepository.findByStudent(studentId, options);
 };
 
-export const getEnrollmentsByOffering = async (offeringId) => {
+export const getEnrollmentsByOffering = async (offeringId, options) => {
   await assertOfferingExists(offeringId);
 
-  return enrollmentRepository.findByOffering(offeringId);
+  return enrollmentRepository.findByOffering(offeringId, options);
 };
 
-export const updateEnrollment = async (id, payload) => {
+export const updateEnrollment = async (id, payload, actor) => {
   return withTransaction(async (client) => {
     const enrollment = await enrollmentRepository.findPlainById(id, client);
 
@@ -127,16 +137,31 @@ export const updateEnrollment = async (id, payload) => {
     }
 
     const data = omitUndefined(payload);
-    return enrollmentRepository.update(id, data, client);
+    const result = await enrollmentRepository.update(id, data, client);
+
+    logAudit({
+      action: "ENROLLMENT_UPDATED",
+      actorId: actor?.id,
+      targetId: id,
+      metadata: payload
+    }, `Enrollment ${id} updated`);
+
+    return result;
   });
 };
 
-export const deleteEnrollment = async (id) => {
+export const deleteEnrollment = async (id, actor) => {
   const enrollment = await enrollmentRepository.remove(id);
 
   if (!enrollment) {
     throw new AppError("Enrollment not found", 404);
   }
+
+  logAudit({
+    action: "ENROLLMENT_DELETED",
+    actorId: actor?.id,
+    targetId: id,
+  }, `Enrollment ${id} deleted`);
 
   return enrollment;
 };

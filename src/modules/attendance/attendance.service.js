@@ -4,37 +4,42 @@ import * as attendanceRepository from "./attendance.repository.js";
 import * as enrollmentRepository from "../enrollment/enrollment.repository.js";
 import * as offeringRepository from "../offering/offering.repository.js";
 import * as teacherRepository from "../teacher/teacher.repository.js";
+import * as studentRepository from "../student/student.repository.js";
+import * as authHelpers from "../../utils/auth.helpers.js";
+import * as academicRules from "../../utils/academic-rules.js";
 
-const assertTeacherOwnership = async (user, offering) => {
-  if (user.role === "admin") return;
-  if (user.role === "teacher") {
-    const teacher = await teacherRepository.findByUserId(user.id);
-    if (!teacher || String(teacher.id) !== String(offering.teacher_id)) {
-      throw new AppError("Forbidden: You do not own this offering", 403);
-    }
-  }
-};
-
-// Validation Helper
-const assertOfferingExists = async (offeringId, client) => {
-  const offering = await offeringRepository.findPlainById(offeringId, client);
-  if (!offering) {
-    throw new AppError("Offering not found", 404);
-  }
-  return offering;
-};
+// Authorization helpers moved to src/utils/auth.helpers.js
 
 export const recordAttendance = async (payload, user) => {
   return withTransaction(async (client) => {
-    const { offering_id, date, records } = payload;
-    const offering = await assertOfferingExists(offering_id, client);
+    const { offering_id, date, records, session_id, schedule_id, exception_id } = payload;
+    
+    let session;
+    let offering;
 
-    if (user) {
-      await assertTeacherOwnership(user, offering);
+    if (session_id) {
+      session = await attendanceRepository.getSessionById(session_id, client);
+      if (!session) throw new AppError("Attendance session not found", 404);
+      offering = await authHelpers.assertOfferingExists(session.offering_id, client);
+    } else {
+      offering = await authHelpers.assertOfferingExists(offering_id, client);
+      session = await attendanceRepository.upsertSession(
+        offering_id, 
+        date, 
+        { schedule_id, exception_id }, 
+        client
+      );
     }
 
+    if (user) {
+      await authHelpers.assertAccessToOffering(user, offering);
+    }
+
+    const offeringId = offering.id;
+
     // Get all enrolled students for this offering
-    const enrollments = await enrollmentRepository.findByOffering(offering_id);
+    const enrollmentsResult = await enrollmentRepository.findByOffering(offeringId, {}, client);
+    const enrollments = enrollmentsResult.data;
     // Filter to only actively enrolled students
     const activeEnrollments = enrollments.filter(e => e.status === 'enrolled');
     const enrolledMap = new Map();
@@ -61,9 +66,6 @@ export const recordAttendance = async (payload, user) => {
       }
     }
 
-    // Create or get session
-    const session = await attendanceRepository.upsertSession(offering_id, date, client);
-
     // Bulk upsert records
     const finalRecordsArray = Array.from(finalRecordsMap.values());
     const savedRecords = await attendanceRepository.bulkUpsertRecords(session.id, finalRecordsArray, client);
@@ -72,49 +74,69 @@ export const recordAttendance = async (payload, user) => {
   });
 };
 
-export const getSessionRecords = async (sessionId) => {
+export const createSession = async (payload, user) => {
+  const { offering_id, date, schedule_id, exception_id } = payload;
+  const offering = await authHelpers.assertOfferingExists(offering_id);
+  await authHelpers.assertAccessToOffering(user, offering);
+
+  return attendanceRepository.upsertSession(offering_id, date, { schedule_id, exception_id });
+};
+
+export const getSessionsByOffering = async (offeringId, user) => {
+  const offering = await authHelpers.assertOfferingExists(offeringId);
+  await authHelpers.assertAccessToOffering(user, offering);
+
+  return attendanceRepository.getSessionsByOffering(offeringId);
+};
+
+export const getSessionRecords = async (sessionId, user) => {
   const session = await attendanceRepository.getSessionById(sessionId);
   if (!session) {
     throw new AppError("Attendance session not found", 404);
   }
+
+  const offering = await authHelpers.assertOfferingExists(session.offering_id);
+  await authHelpers.assertAccessToOffering(user, offering);
+
   return attendanceRepository.getRecordsBySession(sessionId);
 };
 
-export const getAttendanceStats = async (offeringId) => {
-  await assertOfferingExists(offeringId);
-  const data = await attendanceRepository.getAttendanceStats(offeringId);
+export const getAttendanceStats = async (offeringId, user, options) => {
+  const offering = await authHelpers.assertOfferingExists(offeringId);
+  await authHelpers.assertAccessToOffering(user, offering);
 
-  const { totalLectures, studentStats } = data;
+  const { totalLectures, studentStats } = await attendanceRepository.getAttendanceStats(offeringId, options);
 
-  const results = studentStats.map(stat => {
-    const leaves = parseInt(stat.leave_count, 10);
-    const present = parseInt(stat.present_count, 10);
-    
-    // Adjusted Total = Total Lectures - Leaves
-    const adjustedTotal = totalLectures - leaves;
-    
-    // If Adjusted Total = 0 -> Attendance % = 100
-    let attendancePercentage = 100;
-    if (adjustedTotal > 0) {
-      attendancePercentage = (present / adjustedTotal) * 100;
-    }
-
-    // If Attendance % >= 75 -> Eligible
-    const isEligible = attendancePercentage >= 75;
+  const results = studentStats.data.map(stat => {
+    const stats = academicRules.calculateAttendanceStats(totalLectures, stat.present_count, stat.leave_count);
 
     return {
       student_id: stat.student_id,
       roll_number: stat.roll_number,
       total_lectures: totalLectures,
-      leaves: leaves,
-      adjusted_total: adjustedTotal,
-      present: present,
+      leaves: stats.leaves,
+      adjusted_total: stats.adjustedTotal,
+      present: parseInt(stat.present_count, 10),
       absent: parseInt(stat.absent_count, 10),
       late: parseInt(stat.late_count, 10),
-      attendance_percentage: Number(attendancePercentage.toFixed(2)),
-      eligible_for_exam: isEligible
+      attendance_percentage: stats.attendancePercentage,
+      eligible_for_exam: stats.isEligible
     };
   });
 
-  return results;
+  // Security Fix: If student, filter to only their own record
+  let finalData = results;
+  if (user.role === 'student') {
+    const student = await studentRepository.findByUserId(user.id);
+    if (!student) throw new AppError("Student profile not found", 403);
+    finalData = results.filter(r => String(r.student_id) === String(student.id));
+  }
+
+  return {
+    data: finalData,
+    meta: {
+      ...studentStats.meta,
+      total: finalData.length // Update total count if filtered
+    }
+  };
 };

@@ -4,20 +4,31 @@ import { buildInsert } from "../../utils/sql.helpers.js";
 const SESSIONS_TABLE = "attendance_sessions";
 const RECORDS_TABLE = "attendance_records";
 
-export const upsertSession = async (offeringId, date, client = pool) => {
+export const upsertSession = async (offeringId, date, extra = {}, client = pool) => {
+  const { schedule_id = null, exception_id = null } = extra;
   const query = `
-    INSERT INTO ${SESSIONS_TABLE} (offering_id, date)
-    VALUES ($1, $2)
-    ON CONFLICT (offering_id, date) DO UPDATE SET date = EXCLUDED.date
+    INSERT INTO ${SESSIONS_TABLE} (offering_id, date, schedule_id, exception_id)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (offering_id, date) DO UPDATE 
+    SET schedule_id = COALESCE(EXCLUDED.schedule_id, ${SESSIONS_TABLE}.schedule_id),
+        exception_id = COALESCE(EXCLUDED.exception_id, ${SESSIONS_TABLE}.exception_id)
     RETURNING *;
   `;
-  const result = await client.query(query, [offeringId, date]);
+  const result = await client.query(query, [offeringId, date, schedule_id, exception_id]);
   return result.rows[0];
 };
 
 export const getSessionById = async (id, client = pool) => {
   const result = await client.query(`SELECT * FROM ${SESSIONS_TABLE} WHERE id = $1`, [id]);
   return result.rows[0] || null;
+};
+
+export const getSessionsByOffering = async (offeringId, client = pool) => {
+  const result = await client.query(
+    `SELECT * FROM ${SESSIONS_TABLE} WHERE offering_id = $1 ORDER BY date DESC`,
+    [offeringId]
+  );
+  return result.rows;
 };
 
 export const getRecordsBySession = async (sessionId, client = pool) => {
@@ -56,15 +67,17 @@ export const bulkUpsertRecords = async (sessionId, records, client = pool) => {
   return result.rows;
 };
 
-export const getAttendanceStats = async (offeringId, client = pool) => {
-  // Get total lectures (sessions)
+export const getAttendanceStats = async (offeringId, { page = 1, limit = 50 } = {}, client = pool) => {
+  const offset = (page - 1) * limit;
+
+  // Get total lectures (sessions) - this remains a single value
   const sessionResult = await client.query(
     `SELECT COUNT(*)::int AS total_lectures FROM ${SESSIONS_TABLE} WHERE offering_id = $1`,
     [offeringId]
   );
   const totalLectures = sessionResult.rows[0].total_lectures;
 
-  // Get student attendance counts
+  // Get student attendance counts with pagination
   const query = `
     SELECT 
       e.student_id,
@@ -73,17 +86,27 @@ export const getAttendanceStats = async (offeringId, client = pool) => {
       COUNT(*) FILTER (WHERE ar.status = 'absent') AS absent_count,
       COUNT(*) FILTER (WHERE ar.status = 'late') AS late_count,
       COUNT(*) FILTER (WHERE ar.status = 'leave') AS leave_count
-    FROM ${RECORDS_TABLE} ar
-    JOIN ${SESSIONS_TABLE} sess ON sess.id = ar.session_id
-    JOIN enrollments e ON e.id = ar.enrollment_id
+    FROM enrollments e
     JOIN students s ON s.id = e.student_id
-    WHERE sess.offering_id = $1
+    LEFT JOIN ${RECORDS_TABLE} ar ON e.id = ar.enrollment_id
+    LEFT JOIN ${SESSIONS_TABLE} sess ON sess.id = ar.session_id AND sess.offering_id = $1
+    WHERE e.offering_id = $1
     GROUP BY e.student_id, s.roll_number
+    ORDER BY s.roll_number ASC
+    LIMIT $2 OFFSET $3
   `;
-  const result = await client.query(query, [offeringId]);
+  const result = await client.query(query, [offeringId, limit, offset]);
+
+  const countRes = await client.query(
+    `SELECT COUNT(*)::int AS total FROM enrollments WHERE offering_id = $1`,
+    [offeringId]
+  );
 
   return {
     totalLectures,
-    studentStats: result.rows,
+    studentStats: {
+      data: result.rows,
+      meta: { total: countRes.rows[0].total, page, limit }
+    },
   };
 };

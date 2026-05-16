@@ -10,7 +10,7 @@ export const pool = new Pool({
     rejectUnauthorized: false, // required for Supabase
   },
 
-  max: 10, // connection pool
+  max: 30, // connection pool
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 15000,
 });

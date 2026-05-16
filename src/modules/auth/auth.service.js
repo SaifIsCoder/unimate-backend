@@ -1,14 +1,17 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import env from "../../config/env.js";
-import { ADMIN, STUDENT, TEACHER } from "../../constants/roles.js";
+import { ADMIN, STUDENT, TEACHER, SUPER_ADMIN } from "../../constants/roles.js";
 import { AppError } from "../../utils/app-error.js";
 import * as authRepository from "./auth.repository.js";
+import logger from "../../config/logger.js";
 
 const GENERIC_AUTH_ERROR = "Invalid credentials";
 
 const issueToken = (user) =>
-  jwt.sign({ id: user.id, role: user.role }, env.jwtSecret, { expiresIn: "1d" });
+  jwt.sign({ id: user.id, role: user.role }, env.jwtSecret, {
+    expiresIn: "1d",
+  });
 
 const sanitizeUser = (user) => ({
   id: user.id,
@@ -26,9 +29,15 @@ const assertActive = (user) => {
 
 // ── Shared bcrypt login helper ────────────────────────────────────────────────
 
-const verifyPassword = async (plain, hash) => {
+const verifyPassword = async (plain, hash, context = {}) => {
   const valid = await bcrypt.compare(plain, hash);
-  if (!valid) throw new AppError(GENERIC_AUTH_ERROR, 401);
+  if (!valid) {
+    logger.warn(
+      { event: "AUTH_FAILURE", ...context },
+      "Failed login attempt: invalid password",
+    );
+    throw new AppError(GENERIC_AUTH_ERROR, 401);
+  }
 };
 
 // ── Admin login ───────────────────────────────────────────────────────────────
@@ -36,12 +45,16 @@ const verifyPassword = async (plain, hash) => {
 export const loginAdmin = async ({ email, password }) => {
   const user = await authRepository.findUserByEmail(email);
 
-  if (!user || user.role !== ADMIN) {
+  if (!user || ![ADMIN, SUPER_ADMIN].includes(user.role)) {
     throw new AppError(GENERIC_AUTH_ERROR, 401);
   }
 
   assertActive(user);
-  await verifyPassword(password, user.password_hash);
+  await verifyPassword(password, user.password_hash, {
+    email,
+    role: ADMIN,
+    userId: user.id,
+  });
 
   return { token: issueToken(user), user: sanitizeUser(user) };
 };
@@ -57,7 +70,11 @@ export const loginStudent = async ({ email, password }) => {
   }
 
   assertActive(user);
-  await verifyPassword(password, user.password_hash);
+  await verifyPassword(password, user.password_hash, {
+    email,
+    role: STUDENT,
+    userId: user.id,
+  });
 
   return { token: issueToken(user), user: sanitizeUser(user) };
 };
@@ -73,7 +90,11 @@ export const loginTeacher = async ({ email, password }) => {
   }
 
   assertActive(user);
-  await verifyPassword(password, user.password_hash);
+  await verifyPassword(password, user.password_hash, {
+    email,
+    role: TEACHER,
+    userId: user.id,
+  });
 
   return { token: issueToken(user), user: sanitizeUser(user) };
 };

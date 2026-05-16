@@ -10,6 +10,8 @@ import {
   emptyQuery,
   paginationQuery,
   idParams,
+  studentIdParams,
+  offeringIdParams,
   updateEnrollmentBody,
 } from "./enrollment.validation.js";
 
@@ -28,13 +30,13 @@ router.get(
   asyncHandler(controller.getEnrollments),
 );
 router.get(
-  "/student/:id",
-  validate({ params: idParams, query: emptyQuery }),
+  "/student/:studentId",
+  validate({ params: studentIdParams, query: paginationQuery }),
   asyncHandler(controller.getEnrollmentsByStudent),
 );
 router.get(
-  "/offering/:id",
-  validate({ params: idParams, query: emptyQuery }),
+  "/offering/:offeringId",
+  validate({ params: offeringIdParams, query: paginationQuery }),
   asyncHandler(controller.getEnrollmentsByOffering),
 );
 router.get(

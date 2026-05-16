@@ -4,7 +4,7 @@ const validate = (schemas = {}) => (req, res, next) => {
   const options = {
     abortEarly: false,
     allowUnknown: false,
-    stripUnknown: false,
+    stripUnknown: true,
     convert: true,
   };
 
@@ -23,9 +23,12 @@ const validate = (schemas = {}) => (req, res, next) => {
       return next(new AppError(message, 400));
     }
 
-    if (segment !== "query") {
-      req[segment] = value;
-    }
+    Object.defineProperty(req, segment, {
+      value: value,
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
   }
 
   return next();

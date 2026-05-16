@@ -17,6 +17,19 @@ export const findAssignmentsByOffering = async (offeringId, client = pool) => {
   return result.rows;
 };
 
+export const findDuplicateAssignment = async (offeringId, title, description, excludeId = null, client = pool) => {
+  let queryText = `SELECT * FROM ${TABLE} WHERE offering_id = $1 AND title = $2 AND (COALESCE(description, '') = COALESCE($3, ''))`;
+  const params = [offeringId, title, description || null];
+
+  if (excludeId) {
+    queryText += ` AND id != $4`;
+    params.push(excludeId);
+  }
+
+  const result = await client.query(queryText, params);
+  return result.rows[0] || null;
+};
+
 export const findAssignmentById = async (id, client = pool) => {
   const result = await client.query(`SELECT * FROM ${TABLE} WHERE id = $1`, [id]);
   return result.rows[0] || null;

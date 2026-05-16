@@ -5,6 +5,14 @@ export const idParams = Joi.object({
   id: Joi.string().uuid().required(),
 });
 
+export const studentIdParams = Joi.object({
+  studentId: Joi.string().uuid().required(),
+});
+
+export const offeringIdParams = Joi.object({
+  offeringId: Joi.string().uuid().required(),
+});
+
 export const emptyQuery = Joi.object({});
 
 export const paginationQuery = Joi.object({

@@ -27,17 +27,16 @@ router.get(
 );
 
 // Admin-only routes
-router.post(
-  "/",
-  roleMiddleware([ADMIN]),
-  validate({ query: emptyQuery, body: createStudentBody }),
-  asyncHandler(controller.createStudent),
-);
 router.get(
   "/",
   roleMiddleware([ADMIN]),
   validate({ query: emptyQuery }),
   asyncHandler(controller.getStudents),
+);
+router.get(
+  "/semester/:semester",
+  roleMiddleware([ADMIN]),
+  asyncHandler(controller.getStudentsBySemester),
 );
 router.get(
   "/:id/enrollments",
@@ -56,6 +55,13 @@ router.patch(
   roleMiddleware([ADMIN]),
   validate({ params: idParams, query: emptyQuery, body: updateStudentBody }),
   asyncHandler(controller.updateStudent),
+);
+
+router.delete(
+  "/:id",
+  roleMiddleware([ADMIN]),
+  validate({ params: idParams, query: emptyQuery }),
+  asyncHandler(controller.deleteStudent),
 );
 
 export default router;

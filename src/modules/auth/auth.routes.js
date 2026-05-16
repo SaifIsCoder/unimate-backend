@@ -1,4 +1,5 @@
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import asyncHandler from "../../utils/asyncHandler.js";
 import authMiddleware from "../../middlewares/auth.middleware.js";
 import validate from "../../middlewares/validate.middleware.js";
@@ -11,20 +12,31 @@ import {
 
 const router = express.Router();
 
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 5, // Limit each IP to 5 login requests per `window`
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: "Too many login attempts from this IP, please try again after 15 minutes",
+});
+
 router.post(
   "/login/admin",
+  loginLimiter,
   validate({ query: emptyQuery, body: loginBody }),
   asyncHandler(controller.loginAdmin),
 );
 
 router.post(
   "/login/student",
+  loginLimiter,
   validate({ query: emptyQuery, body: loginBody }),
   asyncHandler(controller.loginStudent),
 );
 
 router.post(
   "/login/teacher",
+  loginLimiter,
   validate({ query: emptyQuery, body: loginBody }),
   asyncHandler(controller.loginTeacher),
 );

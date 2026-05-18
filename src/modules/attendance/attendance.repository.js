@@ -110,3 +110,18 @@ export const getAttendanceStats = async (offeringId, { page = 1, limit = 50 } = 
     },
   };
 };
+
+export const findStudentAttendanceHistory = async (studentId, offeringId, client = pool) => {
+  const query = `
+    SELECT 
+      s.id AS session_id,
+      s.date,
+      COALESCE(r.status, 'present') AS status
+    FROM attendance_sessions s
+    LEFT JOIN attendance_records r ON r.session_id = s.id AND r.student_id = $1
+    WHERE s.offering_id = $2
+    ORDER BY s.date DESC;
+  `;
+  const result = await client.query(query, [studentId, offeringId]);
+  return result.rows;
+};

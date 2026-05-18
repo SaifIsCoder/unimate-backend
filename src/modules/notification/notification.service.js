@@ -57,9 +57,20 @@ export const registerFcmToken = async (userId, token) => {
   return notificationRepo.registerFcmToken(userId, token);
 };
 
+const transformNotification = (n) => {
+  if (!n) return n;
+  return {
+    ...n,
+    isRead: n.is_read,
+    createdAt: n.created_at,
+    body: n.message, // 🌟 Map message to body for mobile client compatibility
+  };
+};
+
 export const getUserNotifications = async (userId, page = 1, limit = 20) => {
   const offset = (page - 1) * limit;
-  return notificationRepo.getUserNotifications(userId, limit, offset);
+  const notifications = await notificationRepo.getUserNotifications(userId, limit, offset);
+  return notifications.map(transformNotification);
 };
 
 export const markAsRead = async (id, userId) => {
@@ -67,5 +78,10 @@ export const markAsRead = async (id, userId) => {
   if (!notification) {
     throw new AppError("Notification not found or access denied", 404);
   }
-  return notification;
+  return transformNotification(notification);
+};
+
+export const markAllAsRead = async (userId) => {
+  const notifications = await notificationRepo.markAllAsRead(userId);
+  return notifications.map(transformNotification);
 };

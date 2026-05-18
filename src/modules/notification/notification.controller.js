@@ -16,3 +16,8 @@ export const markAsRead = async (req, res) => {
   const notification = await notificationService.markAsRead(req.params.id, req.user.id);
   return sendSuccess(res, notification);
 };
+
+export const markAllAsRead = async (req, res) => {
+  const result = await notificationService.markAllAsRead(req.user.id);
+  return sendSuccess(res, result);
+};

@@ -59,3 +59,11 @@ export const markAsRead = async (id, userId) => {
   );
   return result.rows[0];
 };
+
+export const markAllAsRead = async (userId) => {
+  const result = await pool.query(
+    `UPDATE notifications SET is_read = true WHERE user_id = $1 RETURNING *`,
+    [userId]
+  );
+  return result.rows;
+};

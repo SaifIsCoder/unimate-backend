@@ -10,6 +10,24 @@ const router = Router();
 
 router.use(authMiddleware);
 
+router.get(
+  "/my",
+  roleMiddleware(["student"]),
+  asyncHandler(assignmentController.getMyAssignments)
+);
+
+router.post(
+  "/:id/submit",
+  roleMiddleware(["student"]),
+  asyncHandler(assignmentController.submitMyAssignment)
+);
+
+router.post(
+  "/:id/progress",
+  roleMiddleware(["student"]),
+  asyncHandler(assignmentController.updateMyAssignmentProgress)
+);
+
 router.post(
   "/",
   roleMiddleware(["admin", "teacher"]),
@@ -44,4 +62,24 @@ router.delete(
   asyncHandler(assignmentController.deleteAssignment)
 );
 
+// ── Mobile Student Submission and Details Routes ──
+router.get(
+  "/:id",
+  validate({ params: validation.idParams }),
+  asyncHandler(assignmentController.getAssignmentDetails)
+);
+
+router.put(
+  "/:id/update-submission",
+  roleMiddleware(["student"]),
+  validate({ params: validation.idParams }),
+  asyncHandler(assignmentController.submitMyAssignment)
+);
+
+router.delete(
+  "/:id/submission",
+  roleMiddleware(["student"]),
+  validate({ params: validation.idParams }),
+  asyncHandler(assignmentController.deleteMyAssignmentSubmission)
+);
 export default router;

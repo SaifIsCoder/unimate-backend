@@ -32,3 +32,15 @@ export const deleteException = async (req, res) => {
   const exception = await scheduleService.deleteException(req.params.id);
   return sendSuccess(res, exception);
 };
+
+// ── Mobile Student Schedule Controller ───────────────────────────────────────────
+
+export const getMySchedules = async (req, res) => {
+  const { date } = req.query;
+  if (date) {
+    const data = await scheduleService.getResolvedSchedulesForDate(req.user.id, date);
+    return sendSuccess(res, data);
+  }
+  const data = await scheduleService.getStudentSchedules(req.user.id);
+  return sendSuccess(res, data);
+};

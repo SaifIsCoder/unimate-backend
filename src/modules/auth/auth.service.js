@@ -13,6 +13,11 @@ const issueToken = (user) =>
     expiresIn: "1d",
   });
 
+const issueRefreshToken = (user) =>
+  jwt.sign({ id: user.id, role: user.role, type: "refresh" }, env.jwtSecret, {
+    expiresIn: "7d",
+  });
+
 const sanitizeUser = (user) => ({
   id: user.id,
   email: user.email,
@@ -121,4 +126,59 @@ export const resetPassword = async (userId, role, newPassword) => {
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await authRepository.setPassword(userId, passwordHash);
+};
+
+// ── Unified auth flow modifications for Mobile ───────────────────────────────────
+
+export const loginUnified = async ({ email, password }) => {
+  const user = await authRepository.findUserByEmail(email);
+
+  if (!user) {
+    throw new AppError(GENERIC_AUTH_ERROR, 401);
+  }
+
+  assertActive(user);
+  await verifyPassword(password, user.password_hash, {
+    email,
+    role: user.role,
+    userId: user.id,
+  });
+
+  const accessToken = issueToken(user);
+  return {
+    token: accessToken,
+    accessToken,
+    refreshToken: issueRefreshToken(user),
+    expiresIn: 86400, // 24 hours in seconds
+    role: user.role,
+    user: sanitizeUser(user),
+  };
+};
+
+export const refreshUnified = async (refreshToken) => {
+  try {
+    const decoded = jwt.verify(refreshToken, env.jwtSecret);
+    if (decoded.type !== "refresh") {
+      throw new AppError("Invalid refresh token", 401);
+    }
+
+    const user = await authRepository.findUserById(decoded.id);
+    if (!user) {
+      throw new AppError("User not found", 401);
+    }
+
+    assertActive(user);
+
+    const accessToken = issueToken(user);
+    return {
+      token: accessToken,
+      accessToken,
+      refreshToken: issueRefreshToken(user),
+      expiresIn: 86400, // 24 hours in seconds
+      role: user.role,
+      user: sanitizeUser(user),
+    };
+  } catch (error) {
+    throw new AppError("Invalid or expired refresh token", 401);
+  }
 };

@@ -20,8 +20,20 @@ router.post(
 );
 
 router.get(
+  "/my",
+  roleMiddleware(["student"]),
+  asyncHandler(scheduleController.getMySchedules)
+);
+
+router.get(
   "/offering/:offeringId",
   asyncHandler(scheduleController.getSchedulesByOffering)
+);
+
+router.get(
+  "/",
+  roleMiddleware(["student"]),
+  asyncHandler(scheduleController.getMySchedules)
 );
 
 router.delete(

@@ -10,6 +10,12 @@ const router = Router();
 
 router.use(authMiddleware);
 
+router.get(
+  "/my/summary",
+  roleMiddleware(["student"]),
+  asyncHandler(attendanceController.getMyAttendanceSummary)
+);
+
 router.post(
   "/",
   roleMiddleware(["admin", "teacher"]),
@@ -43,6 +49,13 @@ router.get(
   roleMiddleware(["admin", "teacher", "student"]),
   validate({ params: validation.offeringIdParams, query: validation.paginationQuery }),
   asyncHandler(attendanceController.getAttendanceStats)
+);
+
+router.get(
+  "/my/history/:offeringId",
+  roleMiddleware(["student"]),
+  validate({ params: validation.offeringIdParams }),
+  asyncHandler(attendanceController.getMyAttendanceHistory)
 );
 
 export default router;

@@ -22,3 +22,22 @@ export const getStudentTranscript = async (req, res) => {
   const transcript = await gradesService.getStudentTranscript(req.params.studentId, req.user);
   return sendSuccess(res, transcript);
 };
+
+// ── Mobile Student Grades Controllers ────────────────────────────────────────────
+
+export const getMyGradesSummary = async (req, res) => {
+  const data = await gradesService.getMyGradesSummary(req.user.id);
+  return sendSuccess(res, data);
+};
+
+export const getMyAllSemesters = async (req, res) => {
+  const data = await gradesService.getMyAllSemesters(req.user.id);
+  return sendSuccess(res, data);
+};
+
+export const updateGpaGoals = async (req, res) => {
+  const targetCgpa = req.body.targetCgpa !== undefined ? Number(req.body.targetCgpa) : null;
+  const studyIntensity = req.body.studyIntensity || null;
+  const result = await gradesService.updateGpaGoals(req.user.id, targetCgpa, studyIntensity);
+  return sendSuccess(res, result);
+};

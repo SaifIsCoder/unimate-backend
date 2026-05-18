@@ -7,6 +7,9 @@ import * as userRepository from "./user.repository.js";
 import * as studentRepository from "../student/student.repository.js";
 import * as teacherRepository from "../teacher/teacher.repository.js";
 import * as adminRepository from "../admins/admin.repository.js";
+import { pool } from "../../config/db.js";
+import * as gradesRepository from "../grades/grades.repository.js";
+import * as academicRules from "../../utils/academic-rules.js";
 
 const sanitizeUser = (user) => {
   if (!user) return null;
@@ -111,5 +114,111 @@ export const softDeleteUser = async (id) => {
   }
 
   return user;
+};
+
+// ── Extended Self-Profile Method for Mobile dashboard ────────────────────────────
+
+const getStudentOverallAttendanceHelper = async (studentId) => {
+  const query = `
+    SELECT 
+      e.id AS enrollment_id,
+      e.offering_id,
+      COUNT(ar.id) FILTER (WHERE ar.status = 'present') AS present_count,
+      COUNT(ar.id) FILTER (WHERE ar.status = 'leave') AS leave_count,
+      (SELECT COUNT(*)::int FROM attendance_sessions WHERE offering_id = e.offering_id) AS total_lectures
+    FROM enrollments e
+    LEFT JOIN attendance_records ar ON ar.enrollment_id = e.id
+    WHERE e.student_id = $1 AND e.status = 'enrolled'
+    GROUP BY e.id, e.offering_id
+  `;
+  const result = await pool.query(query, [studentId]);
+  
+  let totalLectures = 0;
+  let totalPresent = 0;
+  let totalLeaves = 0;
+  
+  result.rows.forEach(row => {
+    totalLectures += parseInt(row.total_lectures, 10) || 0;
+    totalPresent += parseInt(row.present_count, 10) || 0;
+    totalLeaves += parseInt(row.leave_count, 10) || 0;
+  });
+  
+  const overallAdjustedTotal = totalLectures - totalLeaves;
+  let overallPercentage = 100.0;
+  if (overallAdjustedTotal > 0) {
+    overallPercentage = (totalPresent / overallAdjustedTotal) * 100;
+  }
+  
+  return {
+    averageAttendance: Number(overallPercentage.toFixed(2)),
+  };
+};
+
+export const getMe = async (userId) => {
+  const user = await userRepository.findById(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  if (user.role === STUDENT) {
+    const student = await studentRepository.findByUserId(userId);
+    if (student) {
+      // 1. Fetch transcript data to compute dynamic CGPA and credit hours
+      const rawTranscript = await gradesRepository.findTranscriptDataForStudent(student.id);
+      const transcript = academicRules.transformTranscriptData(rawTranscript);
+      
+      // 2. Fetch attendance statistics to compute average attendance
+      const attendance = await getStudentOverallAttendanceHelper(student.id);
+
+      // Extract capitalized name from email
+      const nameParts = user.email.split("@")[0].split(".");
+      const name = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ");
+
+      return {
+        name,
+        registrationNumber: student.roll_number,
+        cgpa: Number(transcript.cgpa.toFixed(2)) || 0.0,
+        creditsEnrolled: transcript.total_credit_hours || 0,
+        averageAttendance: attendance.averageAttendance || 0.0,
+        personal: {
+          email: user.email,
+          phone: student.phone || "",
+          address: student.address || "",
+        },
+        guardian: {
+          fatherName: student.father_name || "",
+          phone: student.guardian_phone || "",
+          emergencyPhone: student.emergency_phone || "",
+        },
+        targetCgpa: Number(student.target_cgpa) || 3.0,
+        studyIntensity: student.study_intensity || "balanced",
+      };
+    }
+  } else if (user.role === TEACHER) {
+    const teacher = await teacherRepository.findByUserId(userId);
+    const nameParts = user.email.split("@")[0].split(".");
+    const name = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ");
+
+    return {
+      name,
+      employeeId: teacher?.employee_id || "",
+      personal: {
+        email: user.email,
+      },
+    };
+  } else {
+    const nameParts = user.email.split("@")[0].split(".");
+    const name = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ");
+
+    return {
+      name,
+      adminId: "A101",
+      personal: {
+        email: user.email,
+      },
+    };
+  }
+
+  return sanitizeUser(user);
 };
 

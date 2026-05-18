@@ -26,3 +26,15 @@ export const getAttendanceStats = async (req, res) => {
   const stats = await attendanceService.getAttendanceStats(req.params.offeringId, req.user, { page, limit });
   return sendSuccess(res, stats);
 };
+
+// ── Mobile Student Attendance Summary Controller ───────────────────────────────────
+
+export const getMyAttendanceSummary = async (req, res) => {
+  const data = await attendanceService.getMyAttendanceSummary(req.user.id);
+  return sendSuccess(res, data);
+};
+
+export const getMyAttendanceHistory = async (req, res) => {
+  const history = await attendanceService.getMyAttendanceHistory(req.user.id, req.params.offeringId);
+  return sendSuccess(res, history);
+};

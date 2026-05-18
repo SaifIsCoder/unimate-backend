@@ -12,7 +12,7 @@ export const getUsers = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-  const user = await userService.getUserById(req.user.id);
+  const user = await userService.getMe(req.user.id);
   return sendSuccess(res, user);
 };
 

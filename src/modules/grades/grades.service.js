@@ -9,6 +9,7 @@ import * as assignmentRepository from "../assignment/assignment.repository.js";
 import * as academicRules from "../../utils/academic-rules.js";
 import * as authHelpers from "../../utils/auth.helpers.js";
 import { logAudit } from "../../utils/audit.js";
+import { pool } from "../../config/db.js";
 
 // Authorization helpers moved to src/utils/auth.helpers.js
 
@@ -209,4 +210,81 @@ export const getStudentTranscript = async (studentId, user) => {
 
   const data = await gradesRepository.findTranscriptDataForStudent(studentId);
   return academicRules.transformTranscriptData(data);
+};
+
+// ── Mobile Student Grades Services ───────────────────────────────────────────────
+
+export const getMyGradesSummary = async (userId) => {
+  const student = await studentRepository.findByUserId(userId);
+  if (!student) {
+    throw new AppError("Student profile not found", 404);
+  }
+
+  const rawTranscript = await gradesRepository.findTranscriptDataForStudent(student.id);
+  const transcript = academicRules.transformTranscriptData(rawTranscript);
+
+  return {
+    cgpa: Number(transcript.cgpa.toFixed(2)) || 0.0,
+    totalCredits: transcript.total_credit_hours || 0,
+    gpaGoal: Number(student.target_cgpa) || 3.0,
+    studyIntensity: student.study_intensity || "balanced",
+    courses: transcript.courses.map(c => ({
+      offering_id: c.offering_id,
+      course_code: c.course_code,
+      course_title: c.course,
+      credit_hours: c.credit_hours,
+      marks: c.final_marks,
+      grade: c.letter_grade,
+      gpa: c.grade_point
+    }))
+  };
+};
+
+export const getMyAllSemesters = async (userId) => {
+  const student = await studentRepository.findByUserId(userId);
+  if (!student) {
+    throw new AppError("Student profile not found", 404);
+  }
+
+  const rawTranscript = await gradesRepository.findTranscriptDataForStudent(student.id);
+  const transcript = academicRules.transformTranscriptData(rawTranscript);
+
+  // Group by semester
+  const semesters = {};
+  transcript.courses.forEach(c => {
+    const sem = String(c.semester || 1);
+    if (!semesters[sem]) {
+      semesters[sem] = [];
+    }
+    semesters[sem].push({
+      course: c.course,
+      code: c.course_code,
+      credit_hours: c.credit_hours,
+      marks: c.final_marks,
+      grade: c.letter_grade,
+      gpa: c.grade_point
+    });
+  });
+
+  return semesters;
+};
+
+export const updateGpaGoals = async (userId, targetCgpa, studyIntensity) => {
+  const student = await studentRepository.findByUserId(userId);
+  if (!student) {
+    throw new AppError("Student profile not found", 404);
+  }
+
+  // Update students table directly
+  const query = `
+    UPDATE students
+    SET 
+      target_cgpa = COALESCE($1, target_cgpa),
+      study_intensity = COALESCE($2, study_intensity),
+      updated_at = NOW()
+    WHERE id = $3
+    RETURNING *;
+  `;
+  const result = await pool.query(query, [targetCgpa, studyIntensity, student.id]);
+  return result.rows[0];
 };

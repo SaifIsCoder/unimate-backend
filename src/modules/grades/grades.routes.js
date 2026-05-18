@@ -10,6 +10,24 @@ const router = Router();
 
 router.use(authMiddleware);
 
+router.get(
+  "/my/summary",
+  roleMiddleware(["student"]),
+  asyncHandler(gradesController.getMyGradesSummary)
+);
+
+router.get(
+  "/all-semesters",
+  roleMiddleware(["student"]),
+  asyncHandler(gradesController.getMyAllSemesters)
+);
+
+router.post(
+  "/gpa-goals",
+  roleMiddleware(["student"]),
+  asyncHandler(gradesController.updateGpaGoals)
+);
+
 router.post(
   "/",
   roleMiddleware(["admin", "teacher"]),

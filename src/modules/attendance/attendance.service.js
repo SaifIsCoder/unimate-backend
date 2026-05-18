@@ -6,6 +6,7 @@ import * as offeringRepository from "../offering/offering.repository.js";
 import * as teacherRepository from "../teacher/teacher.repository.js";
 import * as studentRepository from "../student/student.repository.js";
 import * as authHelpers from "../../utils/auth.helpers.js";
+import { pool } from "../../config/db.js";
 import * as academicRules from "../../utils/academic-rules.js";
 
 // Authorization helpers moved to src/utils/auth.helpers.js
@@ -139,4 +140,87 @@ export const getAttendanceStats = async (offeringId, user, options) => {
       total: finalData.length // Update total count if filtered
     }
   };
+};
+
+// ── Mobile Student Attendance Summary ─────────────────────────────────────────────
+
+export const getMyAttendanceSummary = async (userId) => {
+  const student = await studentRepository.findByUserId(userId);
+  if (!student) {
+    throw new AppError("Student profile not found", 404);
+  }
+
+  const query = `
+    SELECT 
+      e.id AS enrollment_id,
+      e.offering_id,
+      c.code AS course_code,
+      c.title AS course_title,
+      COUNT(ar.id) FILTER (WHERE ar.status = 'present') AS present_count,
+      COUNT(ar.id) FILTER (WHERE ar.status = 'absent') AS absent_count,
+      COUNT(ar.id) FILTER (WHERE ar.status = 'late') AS late_count,
+      COUNT(ar.id) FILTER (WHERE ar.status = 'leave') AS leave_count,
+      (SELECT COUNT(*)::int FROM attendance_sessions WHERE offering_id = e.offering_id) AS total_lectures
+    FROM enrollments e
+    JOIN course_offerings co ON co.id = e.offering_id
+    JOIN courses c ON c.id = co.course_id
+    LEFT JOIN attendance_records ar ON ar.enrollment_id = e.id
+    WHERE e.student_id = $1 AND e.status = 'enrolled'
+    GROUP BY e.id, e.offering_id, c.code, c.title
+  `;
+  const result = await pool.query(query, [student.id]);
+  
+  let totalLectures = 0;
+  let totalPresent = 0;
+  let totalLeaves = 0;
+  
+  const courses = result.rows.map(row => {
+    const present = parseInt(row.present_count, 10) || 0;
+    const absent = parseInt(row.absent_count, 10) || 0;
+    const late = parseInt(row.late_count, 10) || 0;
+    const leaves = parseInt(row.leave_count, 10) || 0;
+    const lectures = parseInt(row.total_lectures, 10) || 0;
+    
+    const adjustedTotal = lectures - leaves;
+    let percentage = 100.0;
+    if (adjustedTotal > 0) {
+      percentage = (present / adjustedTotal) * 100;
+    }
+    
+    totalLectures += lectures;
+    totalPresent += present;
+    totalLeaves += leaves;
+    
+    return {
+      offering_id: row.offering_id,
+      course_code: row.course_code,
+      course_title: row.course_title,
+      total_lectures: lectures,
+      present,
+      absent,
+      late,
+      leave: leaves,
+      attendance_percentage: Number(percentage.toFixed(2)),
+      eligible: percentage >= 75
+    };
+  });
+  
+  const overallAdjustedTotal = totalLectures - totalLeaves;
+  let overallPercentage = 100.0;
+  if (overallAdjustedTotal > 0) {
+    overallPercentage = (totalPresent / overallAdjustedTotal) * 100;
+  }
+  
+  return {
+    averageAttendance: Number(overallPercentage.toFixed(2)),
+    courses
+  };
+};
+
+export const getMyAttendanceHistory = async (userId, offeringId) => {
+  const student = await studentRepository.findByUserId(userId);
+  if (!student) {
+    throw new AppError("Student profile not found", 404);
+  }
+  return attendanceRepository.findStudentAttendanceHistory(student.id, offeringId);
 };

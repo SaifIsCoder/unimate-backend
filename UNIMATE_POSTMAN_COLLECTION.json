@@ -1,7 +1,7 @@
 {
   "info": {
     "_postman_id": "893c8375-7b5a-4931-a836-3914a5b6c891",
-    "name": "Academic Management System API",
+    "name": "Unimate Academic Management System API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -27,22 +27,7 @@
               "host": ["{{base_url}}"],
               "path": ["auth", "login", "admin"]
             }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"d290f1ee-6c54-4b01-90e6-d701748f0851\",\n      \"name\": \"System Administrator\",\n      \"email\": \"admin@unimate.edu\",\n      \"role\": \"ADMIN\"\n    },\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  }\n}"
-            }
-          ]
+          }
         },
         {
           "name": "Login Student",
@@ -56,22 +41,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"student@unimate.edu\",\n  \"password\": \"student123\"\n}"
+              "raw": "{\n  \"email\": \"saif.ur.rehman@unimate.edu\",\n  \"password\": \"student123\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/auth/login/student",
               "host": ["{{base_url}}"],
               "path": ["auth", "login", "student"]
             }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5\",\n      \"name\": \"John Student\",\n      \"email\": \"student@unimate.edu\",\n      \"role\": \"STUDENT\"\n    },\n    \"token\": \"token_here\"\n  }\n}"
-            }
-          ]
+          }
         },
         {
           "name": "Login Teacher",
@@ -92,15 +69,112 @@
               "host": ["{{base_url}}"],
               "path": ["auth", "login", "teacher"]
             }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"user\": {\n      \"id\": \"b2c3d4e5-f6g7-h8i9-j0k1-l2m3n4o5p6q7\",\n      \"name\": \"Dr. Jane Smith\",\n      \"email\": \"teacher@unimate.edu\",\n      \"role\": \"TEACHER\"\n    },\n    \"token\": \"token_here\"\n  }\n}"
+          }
+        },
+        {
+          "name": "Register User (Unified Sign Up)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"saif.ur.rehman@unimate.edu\",\n  \"password\": \"password123\",\n  \"role\": \"student\",\n  \"roll_number\": \"CS-2022-001\",\n  \"departmentId\": 1,\n  \"batch\": 2022\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
             }
-          ]
+          }
+        },
+        {
+          "name": "Login (Unified Mobile Endpoint)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"saif.ur.rehman@unimate.edu\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token (/refresh)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your_refresh_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token (/refresh-token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your_refresh_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh-token",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh-token"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your_refresh_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          }
         },
         {
           "name": "Reset Password",
@@ -114,50 +188,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"user@unimate.edu\"\n}"
+              "raw": "{\n  \"token\": \"your_reset_token_here\",\n  \"newPassword\": \"newpassword123\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/auth/reset-password",
               "host": ["{{base_url}}"],
               "path": ["auth", "reset-password"]
             }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "body": "{\n  \"success\": true,\n  \"message\": \"Password reset link sent to your email\"\n}"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Users",
-      "item": [
-        {
-          "name": "Get My Profile",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/users/me",
-              "host": ["{{base_url}}"],
-              "path": ["users", "me"]
-            }
-          },
-          "response": [
-            {
-              "name": "Success",
-              "status": "OK",
-              "code": 200,
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"d290f1ee-6c54-4b01-90e6-d701748f0851\",\n    \"name\": \"John Doe\",\n    \"email\": \"john@unimate.edu\",\n    \"role\": \"STUDENT\",\n    \"createdAt\": \"2024-01-01T12:00:00Z\"\n  }\n}"
-            }
-          ]
+          }
         },
         {
-          "name": "Create User",
+          "name": "Set Password",
           "request": {
             "method": "POST",
             "header": [
@@ -168,25 +209,67 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"New User\",\n  \"email\": \"newuser@unimate.edu\",\n  \"password\": \"password123\",\n  \"role\": \"STUDENT\",\n  \"departmentId\": \"a5e4d3c2-b1a0-9f8e-7d6c-5b4a3f2e1d0c\"\n}"
+              "raw": "{\n  \"newPassword\": \"newsecurepassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/set-password",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "set-password"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Profile Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Create User (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new_user@unimate.edu\",\n  \"password\": \"password123\",\n  \"role\": \"student\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/users",
               "host": ["{{base_url}}"],
               "path": ["users"]
             }
-          },
-          "response": [
-            {
-              "name": "Created",
-              "status": "Created",
-              "code": 201,
-              "body": "{\n  \"success\": true,\n  \"message\": \"User created successfully\",\n  \"data\": {\n    \"id\": \"f1e2d3c4-b5a6-4c7d-8e9f-0a1b2c3d4e5f\"\n  }\n}"
-            }
-          ]
+          }
         },
         {
-          "name": "Get All Users",
+          "name": "Get All Users (Admin)",
           "request": {
             "method": "GET",
             "header": [],
@@ -198,7 +281,7 @@
           }
         },
         {
-          "name": "Get User by ID",
+          "name": "Get User by ID (Admin)",
           "request": {
             "method": "GET",
             "header": [],
@@ -209,14 +292,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "f1e2d3c4-b5a6-4c7d-8e9f-0a1b2c3d4e5f"
+                  "value": "your_user_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Update User",
+          "name": "Update User (Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -227,7 +310,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@unimate.edu\"\n}"
+              "raw": "{\n  \"is_active\": true\n}"
             },
             "url": {
               "raw": "{{base_url}}/users/:id",
@@ -236,14 +319,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "f1e2d3c4-b5a6-4c7d-8e9f-0a1b2c3d4e5f"
+                  "value": "your_user_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Delete User",
+          "name": "Delete User (Admin)",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -254,7 +337,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "f1e2d3c4-b5a6-4c7d-8e9f-0a1b2c3d4e5f"
+                  "value": "your_user_uuid_here"
                 }
               ]
             }
@@ -266,7 +349,7 @@
       "name": "Admins",
       "item": [
         {
-          "name": "Get My Admin Profile",
+          "name": "Get My Profile",
           "request": {
             "method": "GET",
             "header": [],
@@ -301,7 +384,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                  "value": "your_admin_uuid_here"
                 }
               ]
             }
@@ -319,7 +402,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Super Admin\"\n}"
+              "raw": "{\n  \"name\": \"Super Admin Updated\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/admins/:id",
@@ -328,7 +411,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                  "value": "your_admin_uuid_here"
                 }
               ]
             }
@@ -346,7 +429,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                  "value": "your_admin_uuid_here"
                 }
               ]
             }
@@ -358,7 +441,7 @@
       "name": "Students",
       "item": [
         {
-          "name": "Get My Student Profile",
+          "name": "Get My Profile",
           "request": {
             "method": "GET",
             "header": [],
@@ -394,7 +477,25 @@
           }
         },
         {
-          "name": "Get Student Enrollments",
+          "name": "Get Students by Semester (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/students/semester/:semester",
+              "host": ["{{base_url}}"],
+              "path": ["students", "semester", ":semester"],
+              "variable": [
+                {
+                  "key": "semester",
+                  "value": "4"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Student Enrollments (Admin)",
           "request": {
             "method": "GET",
             "header": [],
@@ -405,14 +506,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5"
+                  "value": "your_student_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Get Student by ID",
+          "name": "Get Student by ID (Admin)",
           "request": {
             "method": "GET",
             "header": [],
@@ -423,14 +524,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5"
+                  "value": "your_student_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Update Student",
+          "name": "Update Student Details (Admin/Self)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -441,7 +542,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"major\": \"Computer Science\",\n  \"semester\": 4\n}"
+              "raw": "{\n  \"phone\": \"+923001234567\",\n  \"address\": \"Main Campus Road, Sargodha\",\n  \"father_name\": \"Father ur Rehman\",\n  \"guardian_phone\": \"+923007654321\",\n  \"emergency_phone\": \"+923009999999\",\n  \"target_cgpa\": 3.8,\n  \"study_intensity\": \"high\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/students/:id",
@@ -450,14 +551,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5"
+                  "value": "your_student_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Delete Student",
+          "name": "Delete Student (Admin)",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -468,7 +569,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5"
+                  "value": "your_student_uuid_here"
                 }
               ]
             }
@@ -480,7 +581,7 @@
       "name": "Teachers",
       "item": [
         {
-          "name": "Get My Teacher Profile",
+          "name": "Get My Profile",
           "request": {
             "method": "GET",
             "header": [],
@@ -504,7 +605,7 @@
           }
         },
         {
-          "name": "Get All Teachers",
+          "name": "Get All Teachers (Admin)",
           "request": {
             "method": "GET",
             "header": [],
@@ -516,7 +617,7 @@
           }
         },
         {
-          "name": "Get Teacher Offerings",
+          "name": "Get Teacher Offerings (Admin)",
           "request": {
             "method": "GET",
             "header": [],
@@ -527,14 +628,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "b2c3d4e5-f6g7-h8i9-j0k1-l2m3n4o5p6q7"
+                  "value": "your_teacher_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Get Teacher by ID",
+          "name": "Get Teacher by ID (Admin)",
           "request": {
             "method": "GET",
             "header": [],
@@ -545,14 +646,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "b2c3d4e5-f6g7-h8i9-j0k1-l2m3n4o5p6q7"
+                  "value": "your_teacher_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Update Teacher",
+          "name": "Update Teacher Details (Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -563,7 +664,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"designation\": \"Senior Professor\",\n  \"qualification\": \"PhD in Computer Science\"\n}"
+              "raw": "{\n  \"designation\": \"Professor\",\n  \"qualification\": \"PhD in Software Architecture\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/teachers/:id",
@@ -572,14 +673,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "b2c3d4e5-f6g7-h8i9-j0k1-l2m3n4o5p6q7"
+                  "value": "your_teacher_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Delete Teacher",
+          "name": "Delete Teacher (Admin)",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -590,7 +691,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "b2c3d4e5-f6g7-h8i9-j0k1-l2m3n4o5p6q7"
+                  "value": "your_teacher_uuid_here"
                 }
               ]
             }
@@ -602,7 +703,7 @@
       "name": "Courses",
       "item": [
         {
-          "name": "Create Course",
+          "name": "Create Course (Admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -613,7 +714,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"CS201\",\n  \"name\": \"Data Structures and Algorithms\",\n  \"credits\": 4,\n  \"departmentId\": \"a5e4d3c2-b1a0-9f8e-7d6c-5b4a3f2e1d0c\"\n}"
+              "raw": "{\n  \"code\": \"CS-402\",\n  \"title\": \"Web Application Development\",\n  \"creditHours\": 3,\n  \"departmentId\": 1\n}"
             },
             "url": {
               "raw": "{{base_url}}/courses",
@@ -646,14 +747,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6"
+                  "value": "your_course_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Update Course",
+          "name": "Update Course (Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -664,7 +765,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Advanced Data Structures\",\n  \"credits\": 3\n}"
+              "raw": "{\n  \"title\": \"Advanced Web Systems Architecture\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/courses/:id",
@@ -673,14 +774,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6"
+                  "value": "your_course_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Delete Course",
+          "name": "Delete Course (Admin)",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -691,7 +792,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6"
+                  "value": "your_course_uuid_here"
                 }
               ]
             }
@@ -703,7 +804,7 @@
       "name": "Offerings",
       "item": [
         {
-          "name": "Create Offering",
+          "name": "Create Course Offering (Admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -714,7 +815,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"courseId\": \"c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6\",\n  \"teacherId\": \"b2c3d4e5-f6g7-h8i9-j0k1-l2m3n4o5p6q7\",\n  \"semester\": \"Fall 2024\",\n  \"section\": \"B\"\n}"
+              "raw": "{\n  \"courseId\": \"your_course_uuid_here\",\n  \"teacherId\": \"your_teacher_uuid_here\",\n  \"semester\": \"Spring 2026\",\n  \"section\": \"A\",\n  \"capacity\": 50\n}"
             },
             "url": {
               "raw": "{{base_url}}/offerings",
@@ -724,7 +825,7 @@
           }
         },
         {
-          "name": "Get All Offerings",
+          "name": "Get All Course Offerings",
           "request": {
             "method": "GET",
             "header": [],
@@ -747,14 +848,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
+                  "value": "your_offering_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Update Offering",
+          "name": "Update Offering (Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -765,7 +866,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"section\": \"A+\",\n  \"teacherId\": \"b2c3d4e5-f6g7-h8i9-j0k1-l2m3n4o5p6q7\"\n}"
+              "raw": "{\n  \"capacity\": 60\n}"
             },
             "url": {
               "raw": "{{base_url}}/offerings/:id",
@@ -774,14 +875,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
+                  "value": "your_offering_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Delete Offering",
+          "name": "Delete Offering (Admin)",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -792,7 +893,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
+                  "value": "your_offering_uuid_here"
                 }
               ]
             }
@@ -804,7 +905,7 @@
       "name": "Enrollments",
       "item": [
         {
-          "name": "Create Enrollment",
+          "name": "Enroll Student (Admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -815,7 +916,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"studentId\": \"a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5\",\n  \"offeringId\": \"o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6\"\n}"
+              "raw": "{\n  \"studentId\": \"your_student_uuid_here\",\n  \"offeringId\": \"your_offering_uuid_here\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/enrollments",
@@ -825,7 +926,7 @@
           }
         },
         {
-          "name": "Get All Enrollments",
+          "name": "Get All Enrollments (Admin)",
           "request": {
             "method": "GET",
             "header": [],
@@ -848,7 +949,7 @@
               "variable": [
                 {
                   "key": "studentId",
-                  "value": "a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5"
+                  "value": "your_student_uuid_here"
                 }
               ]
             }
@@ -866,7 +967,7 @@
               "variable": [
                 {
                   "key": "offeringId",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
+                  "value": "your_offering_uuid_here"
                 }
               ]
             }
@@ -884,14 +985,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "e1f2g3h4-i5j6-k7l8-m9n0-o1p2q3r4s5t6"
+                  "value": "your_enrollment_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Update Enrollment",
+          "name": "Update Enrollment (Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -902,7 +1003,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"WITHDRAWN\"\n}"
+              "raw": "{\n  \"status\": \"dropped\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/enrollments/:id",
@@ -911,14 +1012,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "e1f2g3h4-i5j6-k7l8-m9n0-o1p2q3r4s5t6"
+                  "value": "your_enrollment_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Delete Enrollment",
+          "name": "Delete Enrollment (Admin)",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -929,7 +1030,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "e1f2g3h4-i5j6-k7l8-m9n0-o1p2q3r4s5t6"
+                  "value": "your_enrollment_uuid_here"
                 }
               ]
             }
@@ -938,10 +1039,46 @@
       ]
     },
     {
-      "name": "Schedules",
+      "name": "Schedules / Classes",
       "item": [
         {
-          "name": "Create Schedule",
+          "name": "Get Daily Resolved Timetable (/schedules)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/schedules?date=2026-05-18",
+              "host": ["{{base_url}}"],
+              "path": ["schedules"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-05-18"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Daily Resolved Timetable (/classes)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/classes?date=2026-05-18",
+              "host": ["{{base_url}}"],
+              "path": ["classes"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2026-05-18"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Recurring Timetable Slot",
           "request": {
             "method": "POST",
             "header": [
@@ -952,7 +1089,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"offeringId\": \"o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6\",\n  \"day\": \"Monday\",\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:30\",\n  \"room\": \"Lab 1\"\n}"
+              "raw": "{\n  \"offeringId\": \"your_offering_uuid_here\",\n  \"dayOfWeek\": \"Monday\",\n  \"startTime\": \"09:00:00\",\n  \"endTime\": \"10:30:00\",\n  \"room\": \"Room 12\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/schedules",
@@ -962,43 +1099,7 @@
           }
         },
         {
-          "name": "Get Schedule by Offering",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/schedules/offering/:offeringId",
-              "host": ["{{base_url}}"],
-              "path": ["schedules", "offering", ":offeringId"],
-              "variable": [
-                {
-                  "key": "offeringId",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Schedule",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/schedules/:id",
-              "host": ["{{base_url}}"],
-              "path": ["schedules", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "s1t2u3v4-w5x6-y7z8-a9b0-c1d2e3f4g5h6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Schedule Exception",
+          "name": "Create Schedule Exception (Cancellation / Rescheduling)",
           "request": {
             "method": "POST",
             "header": [
@@ -1009,48 +1110,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"offeringId\": \"o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6\",\n  \"date\": \"2024-10-15\",\n  \"reason\": \"Holiday\",\n  \"isCancelled\": true\n}"
+              "raw": "{\n  \"offeringId\": \"your_offering_uuid_here\",\n  \"date\": \"2026-05-18\",\n  \"exceptionType\": \"rescheduled\",\n  \"newRoom\": \"Main Auditorium\",\n  \"newStartTime\": \"11:00:00\",\n  \"newEndTime\": \"12:30:00\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/schedules/exceptions",
               "host": ["{{base_url}}"],
               "path": ["schedules", "exceptions"]
-            }
-          }
-        },
-        {
-          "name": "Get Schedule Exceptions by Offering",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/schedules/offering/:offeringId/exceptions",
-              "host": ["{{base_url}}"],
-              "path": ["schedules", "offering", ":offeringId", "exceptions"],
-              "variable": [
-                {
-                  "key": "offeringId",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Schedule Exception",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/schedules/exceptions/:id",
-              "host": ["{{base_url}}"],
-              "path": ["schedules", "exceptions", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "x1y2z3a4-b5c6-d7e8-f9g0-h1i2j3k4l5m6"
-                }
-              ]
             }
           }
         }
@@ -1060,7 +1125,25 @@
       "name": "Attendance",
       "item": [
         {
-          "name": "Mark Attendance",
+          "name": "Get My History Timeline (Student)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/attendance/my/history/:offeringId",
+              "host": ["{{base_url}}"],
+              "path": ["attendance", "my", "history", ":offeringId"],
+              "variable": [
+                {
+                  "key": "offeringId",
+                  "value": "your_offering_uuid_here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Session (Teacher)",
           "request": {
             "method": "POST",
             "header": [
@@ -1071,35 +1154,38 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"studentId\": \"a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5\",\n  \"sessionId\": \"s1t2u3v4-w5x6-y7z8-a9b0-c1d2e3f4g5h6\",\n  \"status\": \"PRESENT\"\n}"
+              "raw": "{\n  \"offeringId\": \"your_offering_uuid_here\",\n  \"date\": \"2026-05-18\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/attendance",
+              "raw": "{{base_url}}/attendance/session",
               "host": ["{{base_url}}"],
-              "path": ["attendance"]
+              "path": ["attendance", "session"]
             }
           }
         },
         {
-          "name": "Get Attendance by Session",
+          "name": "Record Attendance Status (Teacher)",
           "request": {
-            "method": "GET",
-            "header": [],
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"your_session_uuid_here\",\n  \"records\": [\n    {\n      \"studentId\": \"your_student_uuid_here\",\n      \"status\": \"present\"\n    }\n  ]\n}"
+            },
             "url": {
-              "raw": "{{base_url}}/attendance/session/:sessionId",
+              "raw": "{{base_url}}/attendance/record",
               "host": ["{{base_url}}"],
-              "path": ["attendance", "session", ":sessionId"],
-              "variable": [
-                {
-                  "key": "sessionId",
-                  "value": "s1t2u3v4-w5x6-y7z8-a9b0-c1d2e3f4g5h6"
-                }
-              ]
+              "path": ["attendance", "record"]
             }
           }
         },
         {
-          "name": "Get Attendance by Offering",
+          "name": "Get Stats by Offering",
           "request": {
             "method": "GET",
             "header": [],
@@ -1110,7 +1196,7 @@
               "variable": [
                 {
                   "key": "offeringId",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
+                  "value": "your_offering_uuid_here"
                 }
               ]
             }
@@ -1122,7 +1208,7 @@
       "name": "Assignments",
       "item": [
         {
-          "name": "Create Assignment",
+          "name": "Create Assignment (Teacher)",
           "request": {
             "method": "POST",
             "header": [
@@ -1133,7 +1219,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Final Project\",\n  \"description\": \"Build a web app using Node.js\",\n  \"dueDate\": \"2024-12-15T23:59:59Z\",\n  \"offeringId\": \"o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6\",\n  \"totalMarks\": 50\n}"
+              "raw": "{\n  \"title\": \"Final Web Systems Project\",\n  \"description\": \"Deploy your Unimate backend architecture\",\n  \"dueDate\": \"2026-06-01T23:59:59Z\",\n  \"offeringId\": \"your_offering_uuid_here\",\n  \"totalPoints\": 100,\n  \"difficulty\": \"medium\",\n  \"priority\": \"high\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/assignments",
@@ -1143,54 +1229,27 @@
           }
         },
         {
-          "name": "Get Assignments by Offering",
+          "name": "Get Assignment Details",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/assignments/offering/:offeringId",
-              "host": ["{{base_url}}"],
-              "path": ["assignments", "offering", ":offeringId"],
-              "variable": [
-                {
-                  "key": "offeringId",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Assignment",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Updated Final Project\",\n  \"totalMarks\": 100\n}"
-            },
-            "url": {
               "raw": "{{base_url}}/assignments/:id",
               "host": ["{{base_url}}"],
               "path": ["assignments", ":id"],
               "variable": [
                 {
                   "key": "id",
-                  "value": "g1h2i3j4-k5l6-m7n8-o9p0-q1r2s3t4u5v6"
+                  "value": "your_assignment_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Mark Assignment Done",
+          "name": "Submit Assignment (Student)",
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
@@ -1199,34 +1258,61 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"isDone\": true\n}"
+              "raw": "{\n  \"textContent\": \"Here is my completed work text\",\n  \"fileUrl\": \"https://supabase.co/unimate/saif_sub.pdf\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/assignments/:id/done",
+              "raw": "{{base_url}}/assignments/:id/submit",
               "host": ["{{base_url}}"],
-              "path": ["assignments", ":id", "done"],
+              "path": ["assignments", ":id", "submit"],
               "variable": [
                 {
                   "key": "id",
-                  "value": "g1h2i3j4-k5l6-m7n8-o9p0-q1r2s3t4u5v6"
+                  "value": "your_assignment_uuid_here"
                 }
               ]
             }
           }
         },
         {
-          "name": "Delete Assignment",
+          "name": "Update Submission (Student)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"textContent\": \"Here is my updated submission text\",\n  \"fileUrl\": \"https://supabase.co/unimate/saif_sub_v2.pdf\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/assignments/:id/update-submission",
+              "host": ["{{base_url}}"],
+              "path": ["assignments", ":id", "update-submission"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "your_assignment_uuid_here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Withdraw Submission (Student)",
           "request": {
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/assignments/:id",
+              "raw": "{{base_url}}/assignments/:id/submission",
               "host": ["{{base_url}}"],
-              "path": ["assignments", ":id"],
+              "path": ["assignments", ":id", "submission"],
               "variable": [
                 {
                   "key": "id",
-                  "value": "g1h2i3j4-k5l6-m7n8-o9p0-q1r2s3t4u5v6"
+                  "value": "your_assignment_uuid_here"
                 }
               ]
             }
@@ -1238,7 +1324,7 @@
       "name": "Grades",
       "item": [
         {
-          "name": "Assign Grade",
+          "name": "Assign Marks / Grade (Teacher)",
           "request": {
             "method": "POST",
             "header": [
@@ -1249,7 +1335,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"studentId\": \"a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5\",\n  \"offeringId\": \"o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6\",\n  \"marks\": 85,\n  \"grade\": \"A\",\n  \"remarks\": \"Good job\"\n}"
+              "raw": "{\n  \"offeringId\": \"your_offering_uuid_here\",\n  \"studentId\": \"your_student_uuid_here\",\n  \"assessmentType\": \"assignment\",\n  \"referenceId\": \"your_assignment_uuid_here\",\n  \"title\": \"Assignment 1\",\n  \"score\": 85,\n  \"maxScore\": 100\n}"
             },
             "url": {
               "raw": "{{base_url}}/grades",
@@ -1270,29 +1356,7 @@
               "variable": [
                 {
                   "key": "offeringId",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Calculate Grade for Student",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/grades/student/:studentId/offering/:offeringId/calculation",
-              "host": ["{{base_url}}"],
-              "path": ["grades", "student", ":studentId", "offering", ":offeringId", "calculation"],
-              "variable": [
-                {
-                  "key": "studentId",
-                  "value": "a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5"
-                },
-                {
-                  "key": "offeringId",
-                  "value": "o1p2q3r4-s5t6-u7v8-w9x0-y1z2a3b4c5d6"
+                  "value": "your_offering_uuid_here"
                 }
               ]
             }
@@ -1310,7 +1374,7 @@
               "variable": [
                 {
                   "key": "studentId",
-                  "value": "a1b2c3d4-e5f6-4g7h-8i9j-k0l1m2n3o4p5"
+                  "value": "your_student_uuid_here"
                 }
               ]
             }
@@ -1322,7 +1386,7 @@
       "name": "Announcements",
       "item": [
         {
-          "name": "Create Announcement",
+          "name": "Create Announcement (Admin/Teacher)",
           "request": {
             "method": "POST",
             "header": [
@@ -1333,7 +1397,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Semester Break\",\n  \"content\": \"The university will be closed from next Monday.\",\n  \"targetRoles\": [\"STUDENT\", \"TEACHER\"]\n}"
+              "raw": "{\n  \"title\": \"Midterm Examination Notice\",\n  \"content\": \"Midterms start next Monday. Slips are ready.\",\n  \"departmentId\": 1,\n  \"offeringId\": null\n}"
             },
             "url": {
               "raw": "{{base_url}}/announcements",
@@ -1343,7 +1407,7 @@
           }
         },
         {
-          "name": "Get All Announcements",
+          "name": "Get Announcements Feed",
           "request": {
             "method": "GET",
             "header": [],
@@ -1353,78 +1417,12 @@
               "path": ["announcements"]
             }
           }
-        },
-        {
-          "name": "Update Announcement",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Updated: Semester Break\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/announcements/:id",
-              "host": ["{{base_url}}"],
-              "path": ["announcements", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "n1m2o3p4-q5r6-s7t8-u9v0-w1x2y3z4a5b6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Announcement",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/announcements/:id",
-              "host": ["{{base_url}}"],
-              "path": ["announcements", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "n1m2o3p4-q5r6-s7t8-u9v0-w1x2y3z4a5b6"
-                }
-              ]
-            }
-          }
         }
       ]
     },
     {
       "name": "Notifications",
       "item": [
-        {
-          "name": "Save Push Token",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"token\": \"fcm_token_example_1234567890\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/notifications/token",
-              "host": ["{{base_url}}"],
-              "path": ["notifications", "token"]
-            }
-          }
-        },
         {
           "name": "Get My Notifications",
           "request": {
@@ -1438,9 +1436,39 @@
           }
         },
         {
-          "name": "Mark Notification as Read",
+          "name": "Mark Notification Read",
           "request": {
             "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notifications/:id/read",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", ":id", "read"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "your_notification_uuid_here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notifications/read-all",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "read-all"]
+            }
+          }
+        },
+        {
+          "name": "Save FCM Device Token",
+          "request": {
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
@@ -1449,18 +1477,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"isRead\": true\n}"
+              "raw": "{\n  \"token\": \"fcm_device_token_string\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/notifications/:id/read",
+              "raw": "{{base_url}}/notifications/token",
               "host": ["{{base_url}}"],
-              "path": ["notifications", ":id", "read"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "r1s2t3u4-v5w6-x7y8-z9a0-b1c2d3e4f5g6"
-                }
-              ]
+              "path": ["notifications", "token"]
             }
           }
         }
@@ -1469,6 +1491,18 @@
     {
       "name": "Community",
       "item": [
+        {
+          "name": "Get Departmental Posts Feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/community/posts",
+              "host": ["{{base_url}}"],
+              "path": ["community", "posts"]
+            }
+          }
+        },
         {
           "name": "Create Post",
           "request": {
@@ -1481,7 +1515,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Tips for Finals\",\n  \"content\": \"Start studying early and focus on core concepts.\",\n  \"category\": \"ACADEMIC\"\n}"
+              "raw": "{\n  \"title\": \"Decoupling Clean Architecture\",\n  \"content\": \"Utilize modular SQL triggers and repositories for state!\",\n  \"departmentId\": 1\n}"
             },
             "url": {
               "raw": "{{base_url}}/community/posts",
@@ -1491,82 +1525,7 @@
           }
         },
         {
-          "name": "Get All Posts",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/community/posts",
-              "host": ["{{base_url}}"],
-              "path": ["community", "posts"]
-            }
-          }
-        },
-        {
-          "name": "Get Post by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/community/posts/:id",
-              "host": ["{{base_url}}"],
-              "path": ["community", "posts", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "p1q2r3s4-t5u6-v7w8-x9y0-z1a2b3c4d5e6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Post",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"content\": \"Updated content: Don't forget to take breaks while studying!\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/community/posts/:id",
-              "host": ["{{base_url}}"],
-              "path": ["community", "posts", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "p1q2r3s4-t5u6-v7w8-x9y0-z1a2b3c4d5e6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Post",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/community/posts/:id",
-              "host": ["{{base_url}}"],
-              "path": ["community", "posts", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "p1q2r3s4-t5u6-v7w8-x9y0-z1a2b3c4d5e6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Create Comment",
+          "name": "Add Comment to Post",
           "request": {
             "method": "POST",
             "header": [
@@ -1577,7 +1536,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"content\": \"Great advice! Thanks for sharing.\"\n}"
+              "raw": "{\n  \"content\": \"Splendid! Rebuilding the Postman collection works perfectly.\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/community/posts/:id/comments",
@@ -1586,52 +1545,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "p1q2r3s4-t5u6-v7w8-x9y0-z1a2b3c4d5e6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Update Comment",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"content\": \"Updated comment: I also suggest forming study groups.\"\n}"
-            },
-            "url": {
-              "raw": "{{base_url}}/community/comments/:id",
-              "host": ["{{base_url}}"],
-              "path": ["community", "comments", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Delete Comment",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/community/comments/:id",
-              "host": ["{{base_url}}"],
-              "path": ["community", "comments", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": "c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6"
+                  "value": "your_post_uuid_here"
                 }
               ]
             }
@@ -1649,7 +1563,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "p1q2r3s4-t5u6-v7w8-x9y0-z1a2b3c4d5e6"
+                  "value": "your_post_uuid_here"
                 }
               ]
             }
@@ -1667,7 +1581,7 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "p1q2r3s4-t5u6-v7w8-x9y0-z1a2b3c4d5e6"
+                  "value": "your_post_uuid_here"
                 }
               ]
             }
@@ -1702,14 +1616,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "a5e4d3c2-b1a0-9f8e-7d6c-5b4a3f2e1d0c"
+                  "value": "1"
                 }
               ]
             }
           }
         },
         {
-          "name": "Create Department",
+          "name": "Create Department (Admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -1720,7 +1634,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Computer Science\",\n  \"code\": \"CS\",\n  \"description\": \"Department of CS and IT\"\n}"
+              "raw": "{\n  \"name\": \"Software Engineering\",\n  \"code\": \"SE\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/departments",
@@ -1730,7 +1644,7 @@
           }
         },
         {
-          "name": "Update Department",
+          "name": "Update Department (Admin)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1741,7 +1655,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Computer Science and Engineering\"\n}"
+              "raw": "{\n  \"name\": \"Department of Software Engineering\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/departments/:id",
@@ -1750,14 +1664,14 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "a5e4d3c2-b1a0-9f8e-7d6c-5b4a3f2e1d0c"
+                  "value": "1"
                 }
               ]
             }
           }
         },
         {
-          "name": "Delete Department",
+          "name": "Delete Department (Admin)",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1768,9 +1682,122 @@
               "variable": [
                 {
                   "key": "id",
-                  "value": "a5e4d3c2-b1a0-9f8e-7d6c-5b4a3f2e1d0c"
+                  "value": "1"
                 }
               ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Assistant (Student)",
+      "item": [
+        {
+          "name": "Get Daily Briefing Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ai/briefing",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "briefing"]
+            }
+          }
+        },
+        {
+          "name": "Send Message to Copilot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"What is my grade projection if I score 90 on my next web development test?\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/copilot",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "copilot"]
+            }
+          }
+        },
+        {
+          "name": "Get CGPA Grade Projection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_cgpa\": 3.8,\n  \"upcoming_assessments\": [\n    {\n      \"offeringId\": \"your_offering_uuid_here\",\n      \"weight\": 20\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/grades/projection",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "grades", "projection"]
+            }
+          }
+        },
+        {
+          "name": "Get Study Blocks Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"study_hours_limit\": 4,\n  \"focus_courses\": [\n    \"your_offering_uuid_here\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/schedule/study-blocks",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "schedule", "study-blocks"]
+            }
+          }
+        },
+        {
+          "name": "Get Prioritized Tasks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offeringId\": \"your_offering_uuid_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/tasks/prioritize",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "tasks", "prioritize"]
+            }
+          }
+        },
+        {
+          "name": "Get AI Announcement Executive Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ai/announcements/summary",
+              "host": ["{{base_url}}"],
+              "path": ["ai", "announcements", "summary"]
             }
           }
         }
@@ -1780,7 +1807,7 @@
       "name": "System",
       "item": [
         {
-          "name": "API Docs",
+          "name": "API Documentation (Swagger)",
           "request": {
             "method": "GET",
             "header": [],
@@ -1792,7 +1819,7 @@
           }
         },
         {
-          "name": "Health Check",
+          "name": "Service Health Status",
           "request": {
             "method": "GET",
             "header": [],
@@ -1811,7 +1838,7 @@
     "bearer": [
       {
         "key": "token",
-        "value": "{{access_token}}",
+        "value": "{{accessToken}}",
         "type": "string"
       }
     ]
@@ -1819,11 +1846,11 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:5000/api",
+      "value": "http://localhost:5000/api/v1",
       "type": "string"
     },
     {
-      "key": "access_token",
+      "key": "accessToken",
       "value": "your_bearer_token_here",
       "type": "string"
     }

@@ -19,6 +19,7 @@ import notificationRoutes from "../modules/notification/notification.routes.js";
 import adminRoutes from "../modules/admins/admin.routes.js";
 import communityRoutes from "../modules/community/community.routes.js";
 import departmentRoutes from "../modules/department/department.routes.js";
+import aiRoutes from "../modules/ai/ai.routes.js";
 import { sendSuccess } from "../utils/response.js";
 
 const router = express.Router();
@@ -41,6 +42,7 @@ router.use("/courses", courseRoutes);
 router.use("/offerings", offeringRoutes);
 router.use("/enrollments", enrollmentRoutes);
 router.use("/schedules", scheduleRoutes);
+router.use("/classes", scheduleRoutes);
 router.use("/attendance", attendanceRoutes);
 router.use("/assignments", assignmentRoutes);
 router.use("/grades", gradesRoutes);
@@ -49,5 +51,6 @@ router.use("/notifications", notificationRoutes);
 router.use("/admins", adminRoutes);
 router.use("/community", communityRoutes);
 router.use("/departments", departmentRoutes);
+router.use("/ai", aiRoutes);
 
 export default router;

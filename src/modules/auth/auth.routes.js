@@ -49,4 +49,40 @@ router.post(
   asyncHandler(controller.resetPassword),
 );
 
+// ── Unified Mobile & Frontend Integration Routes ───────────────────────────────
+
+router.post(
+  "/login",
+  loginLimiter,
+  validate({ query: emptyQuery, body: loginBody }),
+  asyncHandler(controller.loginUnified),
+);
+
+router.post(
+  "/refresh",
+  asyncHandler(controller.refreshUnified),
+);
+
+router.post(
+  "/refresh-token",
+  asyncHandler(controller.refreshUnified),
+);
+
+router.post(
+  "/logout",
+  asyncHandler(controller.logoutUnified),
+);
+
+router.post(
+  "/set-password",
+  authMiddleware,
+  asyncHandler(controller.setPassword),
+);
+
+router.get(
+  "/me",
+  authMiddleware,
+  asyncHandler(controller.getMe),
+);
+
 export default router;

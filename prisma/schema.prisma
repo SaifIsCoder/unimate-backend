@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -12,35 +12,37 @@ model User {
   email           String          @unique
   passwordHash    String          @map("password_hash")
   role            String
-  isActive        Boolean         @default(true) @map("is_active")
+  isActive        Boolean?        @default(true) @map("is_active")
+  createdAt       DateTime?       @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime?       @default(now()) @map("updated_at") @db.Timestamp(6)
   passwordChanged Boolean         @default(false) @map("password_changed")
-  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt       DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
-  student         Student?
-  teacher         Teacher?
   admin           Admin?
-  fcmTokens       FcmToken[]
-  notifications   Notification[]
   announcements   Announcement[]
   communityPosts  CommunityPost[]
+  fcmTokens       FcmToken[]
+  notifications   Notification[]
   postComments    PostComment[]
   postLikes       PostLike[]
+  student         Student?
+  teacher         Teacher?
 
+  @@index([role], map: "idx_users_role")
   @@map("users")
 }
 
 model Department {
   id             Int             @id @default(autoincrement())
-  name           String          @unique
-  code           String          @unique
-  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt      DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
-  students       Student[]
-  teachers       Teacher[]
-  courses        Course[]
+  name           String          @unique @db.VarChar(100)
+  code           String          @unique @db.VarChar(10)
+  description    String?
+  createdAt      DateTime?       @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime?       @default(now()) @map("updated_at") @db.Timestamp(6)
   admins         Admin[]
   announcements  Announcement[]
   communityPosts CommunityPost[]
+  courses        Course[]
+  students       Student[]
+  teachers       Teacher[]
 
   @@map("departments")
 }
@@ -49,7 +51,9 @@ model Student {
   id             String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   userId         String              @unique @map("user_id") @db.Uuid
   rollNumber     String              @unique @map("roll_number")
-  batch          Int?
+  batch          Int
+  createdAt      DateTime?           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime            @default(now()) @map("updated_at") @db.Timestamp(6)
   departmentId   Int?                @map("department_id")
   phone          String?
   address        String?
@@ -58,13 +62,12 @@ model Student {
   emergencyPhone String?             @map("emergency_phone")
   targetCgpa     Decimal?            @default(3.0) @map("target_cgpa") @db.Decimal
   studyIntensity String?             @default("balanced") @map("study_intensity")
-  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt      DateTime            @default(now()) @map("updated_at") @db.Timestamp(6)
-  user           User                @relation(fields: [userId], references: [id], onDelete: Restrict)
-  department     Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   enrollments    Enrollment[]
   assignments    StudentAssignment[]
+  department     Department?         @relation(fields: [departmentId], references: [id], onUpdate: NoAction)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([userId], map: "idx_students_user_id")
   @@map("students")
 }
 
@@ -72,13 +75,14 @@ model Teacher {
   id           String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   userId       String           @unique @map("user_id") @db.Uuid
   employeeId   String           @unique @map("employee_id")
-  departmentId Int?             @map("department_id")
-  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  createdAt    DateTime?        @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt    DateTime         @default(now()) @map("updated_at") @db.Timestamp(6)
-  user         User             @relation(fields: [userId], references: [id], onDelete: Restrict)
-  department   Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId Int?             @map("department_id")
   offerings    CourseOffering[]
+  department   Department?      @relation(fields: [departmentId], references: [id], onUpdate: NoAction)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([userId], map: "idx_teachers_user_id")
   @@map("teachers")
 }
 
@@ -86,10 +90,10 @@ model Admin {
   id           String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   userId       String      @unique @map("user_id") @db.Uuid
   adminId      String      @unique @map("admin_id")
-  departmentId Int?        @map("department_id")
   createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId Int?        @map("department_id")
+  department   Department? @relation(fields: [departmentId], references: [id], onUpdate: NoAction)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("admins")
 }
@@ -99,13 +103,14 @@ model Course {
   code         String           @unique
   title        String
   creditHours  Int              @map("credit_hours")
-  hasPractical Boolean          @default(false) @map("has_practical")
+  createdAt    DateTime?        @default(now()) @map("created_at") @db.Timestamp(6)
+  hasPractical Boolean?         @default(false) @map("has_practical")
+  updatedAt    DateTime?        @default(now()) @map("updated_at") @db.Timestamp(6)
   departmentId Int?             @map("department_id")
-  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt    DateTime         @default(now()) @map("updated_at") @db.Timestamp(6)
-  department   Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   offerings    CourseOffering[]
+  department   Department?      @relation(fields: [departmentId], references: [id], onUpdate: NoAction)
 
+  @@index([code], map: "idx_courses_code")
   @@map("courses")
 }
 
@@ -116,23 +121,25 @@ model CourseOffering {
   semester            String
   section             String
   capacity            Int
+  createdAt           DateTime?              @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime               @default(now()) @map("updated_at") @db.Timestamp(6)
   midWeight           Decimal                @default(30) @map("mid_weight") @db.Decimal
   sessionalWeight     Decimal                @default(20) @map("sessional_weight") @db.Decimal
   finalWeight         Decimal                @default(50) @map("final_weight") @db.Decimal
   practicalWeight     Decimal                @default(0) @map("practical_weight") @db.Decimal
-  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt           DateTime               @default(now()) @map("updated_at") @db.Timestamp(6)
-  course              Course                 @relation(fields: [courseId], references: [id], onDelete: Restrict)
-  teacher             Teacher?               @relation(fields: [teacherId], references: [id], onDelete: SetNull)
-  enrollments         Enrollment[]
-  schedules           Schedule[]
-  scheduleExceptions  ScheduleException[]
-  attendanceSessions  AttendanceSession[]
-  assignments         Assignment[]
-  announcementsLegacy Announcement[]         @relation("AnnouncementLegacyOffering")
   announcementTargets AnnouncementOffering[]
+  announcementsLegacy Announcement[]         @relation("AnnouncementLegacyOffering")
+  assignments         Assignment[]
+  attendanceSessions  AttendanceSession[]
+  course              Course                 @relation(fields: [courseId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  teacher             Teacher?               @relation(fields: [teacherId], references: [id], onUpdate: NoAction)
+  enrollments         Enrollment[]
+  scheduleExceptions  ScheduleException[]
+  schedules           Schedule[]
 
   @@unique([courseId, semester, section])
+  @@index([courseId], map: "idx_offerings_course")
+  @@index([teacherId], map: "idx_offerings_teacher")
   @@map("course_offerings")
 }
 
@@ -140,15 +147,18 @@ model Enrollment {
   id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   studentId         String             @map("student_id") @db.Uuid
   offeringId        String             @map("offering_id") @db.Uuid
-  status            String             @default("enrolled")
-  enrolledAt        DateTime           @default(now()) @map("enrolled_at") @db.Timestamp(6)
+  status            String?            @default("enrolled")
+  enrolledAt        DateTime?          @default(now()) @map("enrolled_at") @db.Timestamp(6)
   updatedAt         DateTime           @default(now()) @map("updated_at") @db.Timestamp(6)
-  student           Student            @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  offering          CourseOffering     @relation(fields: [offeringId], references: [id], onDelete: Restrict)
-  grades            Grade[]
   attendanceRecords AttendanceRecord[]
+  offering          CourseOffering     @relation(fields: [offeringId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student           Student            @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  grades            Grade[]
 
   @@unique([studentId, offeringId])
+  @@index([offeringId], map: "idx_enrollments_offering")
+  @@index([offeringId, status], map: "idx_enrollments_offering_status")
+  @@index([studentId], map: "idx_enrollments_student")
   @@map("enrollments")
 }
 
@@ -161,10 +171,11 @@ model Schedule {
   room               String?
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt          DateTime            @default(now()) @map("updated_at") @db.Timestamp(6)
-  offering           CourseOffering      @relation(fields: [offeringId], references: [id], onDelete: Cascade)
-  exceptions         ScheduleException[]
   attendanceSessions AttendanceSession[]
+  exceptions         ScheduleException[]
+  offering           CourseOffering      @relation(fields: [offeringId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([offeringId], map: "idx_schedules_offering_id")
   @@map("schedules")
 }
 
@@ -178,10 +189,11 @@ model ScheduleException {
   newEndTime         DateTime?           @map("new_end_time") @db.Time(6)
   newRoom            String?             @map("new_room")
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
-  offering           CourseOffering      @relation(fields: [offeringId], references: [id], onDelete: Cascade)
-  schedule           Schedule?           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   attendanceSessions AttendanceSession[]
+  offering           CourseOffering      @relation(fields: [offeringId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  schedule           Schedule?           @relation(fields: [scheduleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([offeringId], map: "idx_schedule_exceptions_offering_id")
   @@map("schedule_exceptions")
 }
 
@@ -192,12 +204,16 @@ model AttendanceSession {
   createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
   scheduleId  String?            @map("schedule_id") @db.Uuid
   exceptionId String?            @map("exception_id") @db.Uuid
-  offering    CourseOffering     @relation(fields: [offeringId], references: [id], onDelete: Cascade)
-  schedule    Schedule?          @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
-  exception   ScheduleException? @relation(fields: [exceptionId], references: [id], onDelete: SetNull)
   records     AttendanceRecord[]
+  exception   ScheduleException? @relation(fields: [exceptionId], references: [id], onUpdate: NoAction)
+  offering    CourseOffering     @relation(fields: [offeringId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  schedule    Schedule?          @relation(fields: [scheduleId], references: [id], onUpdate: NoAction)
 
   @@unique([offeringId, date])
+  @@index([date], map: "idx_attendance_sessions_date")
+  @@index([exceptionId], map: "idx_attendance_sessions_exception")
+  @@index([offeringId], map: "idx_attendance_sessions_offering_id")
+  @@index([scheduleId], map: "idx_attendance_sessions_schedule")
   @@map("attendance_sessions")
 }
 
@@ -207,10 +223,11 @@ model AttendanceRecord {
   status       String
   createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
   enrollmentId String            @map("enrollment_id") @db.Uuid
-  session      AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  enrollment   Enrollment        @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  enrollment   Enrollment        @relation(fields: [enrollmentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  session      AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([sessionId, enrollmentId])
+  @@index([enrollmentId], map: "idx_attendance_records_enrollment_id")
   @@map("attendance_records")
 }
 
@@ -222,15 +239,16 @@ model Assignment {
   dueDate            DateTime            @map("due_date") @db.Timestamp(6)
   totalPoints        Decimal             @map("total_points") @db.Decimal
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt          DateTime            @default(now()) @map("updated_at") @db.Timestamp(6)
   isDone             Boolean             @default(false) @map("is_done")
+  updatedAt          DateTime            @default(now()) @map("updated_at") @db.Timestamp(6)
   assessmentType     String              @default("assignment") @map("assessment_type")
   difficulty         String?             @default("Medium")
   priority           String?             @default("Normal")
-  offering           CourseOffering      @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  offering           CourseOffering      @relation(fields: [offeringId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   grades             Grade[]             @relation("GradeAssignment")
   studentAssignments StudentAssignment[]
 
+  @@index([offeringId], map: "idx_assignments_offering_id")
   @@map("assignments")
 }
 
@@ -245,10 +263,12 @@ model StudentAssignment {
   textContent  String?    @map("text_content")
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt    DateTime   @default(now()) @map("updated_at") @db.Timestamp(6)
-  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([studentId, assignmentId])
+  @@index([studentId, status], map: "idx_student_assignments_status")
+  @@index([studentId], map: "idx_student_assignments_student")
   @@map("student_assignments")
 }
 
@@ -262,9 +282,12 @@ model Grade {
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
   enrollmentId   String      @map("enrollment_id") @db.Uuid
   updatedAt      DateTime    @default(now()) @map("updated_at") @db.Timestamp(6)
-  enrollment     Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-  assignment     Assignment? @relation("GradeAssignment", fields: [referenceId], references: [id], onDelete: Restrict)
+  enrollment     Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assignment     Assignment? @relation("GradeAssignment", fields: [referenceId], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
+  @@unique([enrollmentId, assessmentType], map: "idx_grades_unique_assessment", where: raw("((reference_id IS NULL) AND (assessment_type <> 'assignment'::text))"))
+  @@unique([enrollmentId, referenceId], map: "idx_grades_unique_assignment", where: raw("(reference_id IS NOT NULL)"))
+  @@index([enrollmentId], map: "idx_grades_enrollment_id")
   @@map("grades")
 }
 
@@ -273,25 +296,27 @@ model FcmToken {
   userId    String   @map("user_id") @db.Uuid
   token     String   @unique
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([userId], map: "idx_fcm_tokens_user_id")
   @@map("fcm_tokens")
 }
 
 model Announcement {
-  id                String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  authorId          String                 @map("author_id") @db.Uuid
-  title             String
-  content           String
-  offeringId        String?                @map("offering_id") @db.Uuid
-  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
-  semester          String?
-  departmentId      Int?                   @map("department_id")
-  author            User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  legacyOffering    CourseOffering?        @relation("AnnouncementLegacyOffering", fields: [offeringId], references: [id], onDelete: Cascade)
-  department        Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  offeringTargets   AnnouncementOffering[]
+  id              String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  authorId        String                 @map("author_id") @db.Uuid
+  title           String
+  content         String
+  offeringId      String?                @map("offering_id") @db.Uuid
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
+  semester        String?
+  departmentId    Int?                   @map("department_id")
+  offeringTargets AnnouncementOffering[]
+  author          User                   @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  department      Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  legacyOffering  CourseOffering?        @relation("AnnouncementLegacyOffering", fields: [offeringId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([offeringId], map: "idx_announcements_offering")
   @@map("announcements")
 }
 
@@ -300,8 +325,8 @@ model AnnouncementOffering {
   announcementId String         @map("announcement_id") @db.Uuid
   offeringId     String         @map("offering_id") @db.Uuid
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
-  announcement   Announcement   @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-  offering       CourseOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  announcement   Announcement   @relation(fields: [announcementId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  offering       CourseOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([announcementId, offeringId])
   @@map("announcement_offerings")
@@ -316,25 +341,30 @@ model Notification {
   referenceId String?  @map("reference_id") @db.Uuid
   isRead      Boolean  @default(false) @map("is_read")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_unread_latest", where: raw("(is_read = false)"))
+  @@index([userId, createdAt(sort: Desc)], map: "idx_notifications_user_id_created")
+  @@index([userId], map: "idx_notifications_user_unread", where: raw("(is_read = false)"))
   @@map("notifications")
 }
 
 model CommunityPost {
-  id           String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  authorId     String       @map("author_id") @db.Uuid
+  id           String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  authorId     String        @map("author_id") @db.Uuid
   title        String
   content      String
-  status       String       @default("active")
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt    DateTime     @default(now()) @map("updated_at") @db.Timestamp(6)
-  departmentId Int?         @map("department_id")
-  author       User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  status       String        @default("active")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime      @default(now()) @map("updated_at") @db.Timestamp(6)
+  departmentId Int?          @map("department_id")
+  author       User          @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  department   Department?   @relation(fields: [departmentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   comments     PostComment[]
   likes        PostLike[]
 
+  @@index([departmentId], map: "idx_community_posts_department_id")
+  @@index([status], map: "idx_community_posts_status")
   @@map("community_posts")
 }
 
@@ -346,9 +376,10 @@ model PostComment {
   status    String        @default("active")
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt DateTime      @default(now()) @map("updated_at") @db.Timestamp(6)
-  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([postId], map: "idx_post_comments_post_id")
   @@map("post_comments")
 }
 
@@ -357,21 +388,10 @@ model PostLike {
   postId    String        @map("post_id") @db.Uuid
   userId    String        @map("user_id") @db.Uuid
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
-  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([postId, userId])
+  @@index([userId], map: "idx_post_likes_user_id")
   @@map("post_likes")
-}
-
-model Event {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title       String
-  description String
-  date        DateTime @db.Timestamp(6)
-  location    String
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamp(6)
-
-  @@map("events")
 }

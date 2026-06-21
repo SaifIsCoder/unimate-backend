@@ -20,6 +20,7 @@ import adminRoutes from "../modules/admins/admin.routes.js";
 import communityRoutes from "../modules/community/community.routes.js";
 import departmentRoutes from "../modules/department/department.routes.js";
 import aiRoutes from "../modules/ai/ai.routes.js";
+import eventRoutes from "../modules/events/events.routes.js";
 import { sendSuccess } from "../utils/response.js";
 
 const router = express.Router();
@@ -52,5 +53,6 @@ router.use("/admins", adminRoutes);
 router.use("/community", communityRoutes);
 router.use("/departments", departmentRoutes);
 router.use("/ai", aiRoutes);
+router.use("/events", eventRoutes);
 
 export default router;

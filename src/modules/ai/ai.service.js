@@ -7,6 +7,15 @@ import * as gradesRepository from "../grades/grades.repository.js";
 import * as assignmentRepository from "../assignment/assignment.repository.js";
 import * as academicRules from "../../utils/academic-rules.js";
 
+const safeJsonParse = (text, fallbackStart = "{", fallbackEnd = "}") => {
+  const jsonStart = text.indexOf(fallbackStart);
+  const jsonEnd = text.lastIndexOf(fallbackEnd) + 1;
+  if (jsonStart !== -1 && jsonEnd !== -1) {
+    return JSON.parse(text.slice(jsonStart, jsonEnd));
+  }
+  return null;
+};
+
 // Initialize Gemini Client safely
 let genAI = null;
 if (env.geminiApiKey) {
@@ -615,4 +624,226 @@ export const getAnnouncementsSummary = async (userId) => {
   }
 
   return { summary };
+};
+
+export const getGpaGoal = async (userId, options = {}) => {
+  const profile = await fetchStudentAcademicProfile(userId);
+  const targetCgpa = Number(options.targetCgpa) || Number(profile.student.target_cgpa) || 3.0;
+  const studyIntensity = options.studyIntensity || profile.student.study_intensity || "balanced";
+  const projection = await getGradeProjection(userId, targetCgpa, studyIntensity);
+
+  const prioritizedCourses = [...profile.courses]
+    .sort((a, b) => {
+      const creditGap = Number(b.credit_hours) - Number(a.credit_hours);
+      if (creditGap !== 0) return creditGap;
+      return Number(a.grade_point) - Number(b.grade_point);
+    })
+    .slice(0, 5)
+    .map((course) => ({
+      offeringId: course.offering_id,
+      courseCode: course.course_code,
+      courseTitle: course.course,
+      creditHours: course.credit_hours,
+      currentGradePoint: course.grade_point,
+    }));
+
+  return {
+    targetCgpa,
+    requiredGpa: projection.requiredGpa,
+    difficultyMultiplier: projection.difficultyMultiplier,
+    prioritizedCourses,
+    notes: projection.strategicAdvice,
+    upcomingAssessments: options.upcomingAssessments || [],
+  };
+};
+
+export const getAttendanceGuardian = async (userId) => {
+  const profile = await fetchStudentAcademicProfile(userId);
+
+  const safelySkippable = {};
+  const warnings = [];
+  const courseSummaries = profile.attendanceCourses.map((course) => {
+    const adjustedTotal = Math.max(0, course.total - (course.leave || 0));
+    const currentPercentage = Number(course.attendance_percentage) || 0;
+    let skippable = 0;
+
+    if (adjustedTotal > 0 && currentPercentage >= 75) {
+      skippable = Math.max(0, Math.floor((course.present / 0.75) - adjustedTotal));
+    }
+
+    safelySkippable[course.course_code] = skippable;
+
+    if (currentPercentage < 75) {
+      warnings.push(`${course.course_code} is below 75% attendance and needs immediate recovery.`);
+    } else if (currentPercentage < 80) {
+      warnings.push(`${course.course_code} is close to the attendance threshold with limited skip margin.`);
+    }
+
+    return {
+      courseCode: course.course_code,
+      courseTitle: course.course_title,
+      attendancePercentage: currentPercentage,
+      safelySkippable: skippable,
+      present: course.present,
+      totalClasses: course.total,
+    };
+  });
+
+  return {
+    safelySkippable,
+    warnings,
+    courses: courseSummaries,
+  };
+};
+
+export const getSmartSchedule = async (userId, dateStr) => {
+  const profile = await fetchStudentAcademicProfile(userId);
+  const dayFilter = dateStr ? new Date(dateStr) : null;
+  const dayOfWeek = dayFilter
+    ? new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(dayFilter)
+    : null;
+
+  const query = `
+    SELECT
+      c.code AS course_code,
+      c.title AS course_title,
+      s.day_of_week,
+      s.start_time,
+      s.end_time,
+      s.room
+    FROM enrollments e
+    JOIN course_offerings co ON co.id = e.offering_id
+    JOIN courses c ON c.id = co.course_id
+    JOIN schedules s ON s.offering_id = co.id
+    WHERE e.student_id = $1 AND e.status = 'enrolled'
+      ${dayOfWeek ? "AND s.day_of_week = $2" : ""}
+    ORDER BY s.day_of_week ASC, s.start_time ASC
+  `;
+  const params = dayOfWeek ? [profile.student.id, dayOfWeek] : [profile.student.id];
+  const result = await pool.query(query, params);
+
+  const grouped = result.rows.reduce((acc, row) => {
+    if (!acc[row.day_of_week]) {
+      acc[row.day_of_week] = [];
+    }
+    acc[row.day_of_week].push(row);
+    return acc;
+  }, {});
+
+  const congestedDays = [];
+  const breakSuggestions = [];
+
+  Object.entries(grouped).forEach(([day, classes]) => {
+    const congestedCourses = [];
+
+    for (let index = 0; index < classes.length - 1; index += 1) {
+      const current = classes[index];
+      const next = classes[index + 1];
+      const currentEnd = new Date(`1970-01-01T${current.end_time}`);
+      const nextStart = new Date(`1970-01-01T${next.start_time}`);
+      const gapMinutes = (nextStart - currentEnd) / (1000 * 60);
+
+      if (gapMinutes < 15) {
+        congestedCourses.push(`${current.course_code} -> ${next.course_code}`);
+      } else if (gapMinutes >= 45) {
+        breakSuggestions.push({
+          day,
+          windowStart: current.end_time,
+          windowEnd: next.start_time,
+          suggestion: `Use the ${gapMinutes}-minute gap for revision or assignment prep.`,
+        });
+      }
+    }
+
+    if (congestedCourses.length > 0) {
+      congestedDays.push({
+        day,
+        backToBackChains: congestedCourses,
+      });
+    }
+  });
+
+  return {
+    congestedDays,
+    breakSuggestions,
+  };
+};
+
+export const getSkillTrends = async (userId) => {
+  const profile = await fetchStudentAcademicProfile(userId);
+  const postsQuery = `
+    SELECT title, content
+    FROM community_posts
+    WHERE department_id = $1 AND status = 'active'
+    ORDER BY created_at DESC
+    LIMIT 200
+  `;
+  const postsResult = await pool.query(postsQuery, [profile.student.department_id]);
+  const posts = postsResult.rows;
+  const combinedText = posts.map((post) => `${post.title} ${post.content}`).join(" ");
+
+  if (genAI && combinedText.trim()) {
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `
+        Perform NLP analysis on these department community posts and return strict JSON.
+        Posts: ${combinedText}
+
+        Output:
+        {
+          "trends": [
+            { "skill": "AWS", "mentionCount": 4 }
+          ],
+          "recommendations": ["Take cloud-focused electives"]
+        }
+      `;
+      const result = await model.generateContent(prompt);
+      const parsed = safeJsonParse(result.response.text().trim());
+      if (parsed) {
+        return parsed;
+      }
+    } catch (error) {
+      console.warn("Gemini skill trends failed, falling back to rule-based trend extraction:", error.message);
+    }
+  }
+
+  const trackedSkills = [
+    "aws",
+    "azure",
+    "gcp",
+    "react",
+    "next.js",
+    "node",
+    "python",
+    "flutter",
+    "docker",
+    "kubernetes",
+    "sql",
+    "figma",
+    "ui/ux",
+    "machine learning",
+    "ai",
+    "data science",
+    "cybersecurity",
+  ];
+
+  const normalizedText = combinedText.toLowerCase();
+  const trends = trackedSkills
+    .map((skill) => {
+      const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const matches = normalizedText.match(new RegExp(`\\b${escaped}\\b`, "g"));
+      return {
+        skill: skill.toUpperCase() === "AWS" ? "AWS" : skill,
+        mentionCount: matches ? matches.length : 0,
+      };
+    })
+    .filter((item) => item.mentionCount > 0)
+    .sort((a, b) => b.mentionCount - a.mentionCount)
+    .slice(0, 5);
+
+  const recommendations = trends.length
+    ? trends.slice(0, 3).map((trend) => `Explore practical work related to ${trend.skill}.`)
+    : ["Community trend data is still limited; encourage more peer discussion posts."];
+
+  return { trends, recommendations };
 };

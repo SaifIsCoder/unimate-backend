@@ -1,0 +1,377 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email           String          @unique
+  passwordHash    String          @map("password_hash")
+  role            String
+  isActive        Boolean         @default(true) @map("is_active")
+  passwordChanged Boolean         @default(false) @map("password_changed")
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
+  student         Student?
+  teacher         Teacher?
+  admin           Admin?
+  fcmTokens       FcmToken[]
+  notifications   Notification[]
+  announcements   Announcement[]
+  communityPosts  CommunityPost[]
+  postComments    PostComment[]
+  postLikes       PostLike[]
+
+  @@map("users")
+}
+
+model Department {
+  id             Int             @id @default(autoincrement())
+  name           String          @unique
+  code           String          @unique
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime        @default(now()) @map("updated_at") @db.Timestamp(6)
+  students       Student[]
+  teachers       Teacher[]
+  courses        Course[]
+  admins         Admin[]
+  announcements  Announcement[]
+  communityPosts CommunityPost[]
+
+  @@map("departments")
+}
+
+model Student {
+  id             String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId         String              @unique @map("user_id") @db.Uuid
+  rollNumber     String              @unique @map("roll_number")
+  batch          Int?
+  departmentId   Int?                @map("department_id")
+  phone          String?
+  address        String?
+  fatherName     String?             @map("father_name")
+  guardianPhone  String?             @map("guardian_phone")
+  emergencyPhone String?             @map("emergency_phone")
+  targetCgpa     Decimal?            @default(3.0) @map("target_cgpa") @db.Decimal
+  studyIntensity String?             @default("balanced") @map("study_intensity")
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime            @default(now()) @map("updated_at") @db.Timestamp(6)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  department     Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  enrollments    Enrollment[]
+  assignments    StudentAssignment[]
+
+  @@map("students")
+}
+
+model Teacher {
+  id           String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId       String           @unique @map("user_id") @db.Uuid
+  employeeId   String           @unique @map("employee_id")
+  departmentId Int?             @map("department_id")
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime         @default(now()) @map("updated_at") @db.Timestamp(6)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  department   Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  offerings    CourseOffering[]
+
+  @@map("teachers")
+}
+
+model Admin {
+  id           String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId       String      @unique @map("user_id") @db.Uuid
+  adminId      String      @unique @map("admin_id")
+  departmentId Int?        @map("department_id")
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@map("admins")
+}
+
+model Course {
+  id           String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code         String           @unique
+  title        String
+  creditHours  Int              @map("credit_hours")
+  hasPractical Boolean          @default(false) @map("has_practical")
+  departmentId Int?             @map("department_id")
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime         @default(now()) @map("updated_at") @db.Timestamp(6)
+  department   Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  offerings    CourseOffering[]
+
+  @@map("courses")
+}
+
+model CourseOffering {
+  id                  String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  courseId            String                 @map("course_id") @db.Uuid
+  teacherId           String?                @map("teacher_id") @db.Uuid
+  semester            String
+  section             String
+  capacity            Int
+  midWeight           Decimal                @default(30) @map("mid_weight") @db.Decimal
+  sessionalWeight     Decimal                @default(20) @map("sessional_weight") @db.Decimal
+  finalWeight         Decimal                @default(50) @map("final_weight") @db.Decimal
+  practicalWeight     Decimal                @default(0) @map("practical_weight") @db.Decimal
+  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime               @default(now()) @map("updated_at") @db.Timestamp(6)
+  course              Course                 @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  teacher             Teacher?               @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+  enrollments         Enrollment[]
+  schedules           Schedule[]
+  scheduleExceptions  ScheduleException[]
+  attendanceSessions  AttendanceSession[]
+  assignments         Assignment[]
+  announcementsLegacy Announcement[]         @relation("AnnouncementLegacyOffering")
+  announcementTargets AnnouncementOffering[]
+
+  @@unique([courseId, semester, section])
+  @@map("course_offerings")
+}
+
+model Enrollment {
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId         String             @map("student_id") @db.Uuid
+  offeringId        String             @map("offering_id") @db.Uuid
+  status            String             @default("enrolled")
+  enrolledAt        DateTime           @default(now()) @map("enrolled_at") @db.Timestamp(6)
+  updatedAt         DateTime           @default(now()) @map("updated_at") @db.Timestamp(6)
+  student           Student            @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  offering          CourseOffering     @relation(fields: [offeringId], references: [id], onDelete: Restrict)
+  grades            Grade[]
+  attendanceRecords AttendanceRecord[]
+
+  @@unique([studentId, offeringId])
+  @@map("enrollments")
+}
+
+model Schedule {
+  id                 String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  offeringId         String              @map("offering_id") @db.Uuid
+  dayOfWeek          String              @map("day_of_week")
+  startTime          DateTime            @map("start_time") @db.Time(6)
+  endTime            DateTime            @map("end_time") @db.Time(6)
+  room               String?
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime            @default(now()) @map("updated_at") @db.Timestamp(6)
+  offering           CourseOffering      @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  exceptions         ScheduleException[]
+  attendanceSessions AttendanceSession[]
+
+  @@map("schedules")
+}
+
+model ScheduleException {
+  id                 String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  offeringId         String              @map("offering_id") @db.Uuid
+  scheduleId         String?             @map("schedule_id") @db.Uuid
+  date               DateTime            @db.Date
+  exceptionType      String              @map("exception_type")
+  newStartTime       DateTime?           @map("new_start_time") @db.Time(6)
+  newEndTime         DateTime?           @map("new_end_time") @db.Time(6)
+  newRoom            String?             @map("new_room")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
+  offering           CourseOffering      @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  schedule           Schedule?           @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  attendanceSessions AttendanceSession[]
+
+  @@map("schedule_exceptions")
+}
+
+model AttendanceSession {
+  id          String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  offeringId  String             @map("offering_id") @db.Uuid
+  date        DateTime           @db.Date
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  scheduleId  String?            @map("schedule_id") @db.Uuid
+  exceptionId String?            @map("exception_id") @db.Uuid
+  offering    CourseOffering     @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  schedule    Schedule?          @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  exception   ScheduleException? @relation(fields: [exceptionId], references: [id], onDelete: SetNull)
+  records     AttendanceRecord[]
+
+  @@unique([offeringId, date])
+  @@map("attendance_sessions")
+}
+
+model AttendanceRecord {
+  id           String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sessionId    String            @map("session_id") @db.Uuid
+  status       String
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  enrollmentId String            @map("enrollment_id") @db.Uuid
+  session      AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  enrollment   Enrollment        @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, enrollmentId])
+  @@map("attendance_records")
+}
+
+model Assignment {
+  id                 String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  offeringId         String              @map("offering_id") @db.Uuid
+  title              String
+  description        String?
+  dueDate            DateTime            @map("due_date") @db.Timestamp(6)
+  totalPoints        Decimal             @map("total_points") @db.Decimal
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime            @default(now()) @map("updated_at") @db.Timestamp(6)
+  isDone             Boolean             @default(false) @map("is_done")
+  assessmentType     String              @default("assignment") @map("assessment_type")
+  difficulty         String?             @default("Medium")
+  priority           String?             @default("Normal")
+  offering           CourseOffering      @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  grades             Grade[]             @relation("GradeAssignment")
+  studentAssignments StudentAssignment[]
+
+  @@map("assignments")
+}
+
+model StudentAssignment {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  studentId    String     @map("student_id") @db.Uuid
+  assignmentId String     @map("assignment_id") @db.Uuid
+  progress     Int        @default(0)
+  status       String     @default("pending")
+  submittedAt  DateTime?  @map("submitted_at") @db.Timestamp(6)
+  fileUrl      String?    @map("file_url")
+  textContent  String?    @map("text_content")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime   @default(now()) @map("updated_at") @db.Timestamp(6)
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, assignmentId])
+  @@map("student_assignments")
+}
+
+model Grade {
+  id             String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  assessmentType String      @map("assessment_type")
+  referenceId    String?     @map("reference_id") @db.Uuid
+  title          String
+  score          Decimal     @db.Decimal
+  maxScore       Decimal     @map("max_score") @db.Decimal
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+  enrollmentId   String      @map("enrollment_id") @db.Uuid
+  updatedAt      DateTime    @default(now()) @map("updated_at") @db.Timestamp(6)
+  enrollment     Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  assignment     Assignment? @relation("GradeAssignment", fields: [referenceId], references: [id], onDelete: Restrict)
+
+  @@map("grades")
+}
+
+model FcmToken {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("fcm_tokens")
+}
+
+model Announcement {
+  id                String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  authorId          String                 @map("author_id") @db.Uuid
+  title             String
+  content           String
+  offeringId        String?                @map("offering_id") @db.Uuid
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
+  semester          String?
+  departmentId      Int?                   @map("department_id")
+  author            User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  legacyOffering    CourseOffering?        @relation("AnnouncementLegacyOffering", fields: [offeringId], references: [id], onDelete: Cascade)
+  department        Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  offeringTargets   AnnouncementOffering[]
+
+  @@map("announcements")
+}
+
+model AnnouncementOffering {
+  id             String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  announcementId String         @map("announcement_id") @db.Uuid
+  offeringId     String         @map("offering_id") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamp(6)
+  announcement   Announcement   @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  offering       CourseOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, offeringId])
+  @@map("announcement_offerings")
+}
+
+model Notification {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        String
+  title       String
+  message     String
+  referenceId String?  @map("reference_id") @db.Uuid
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model CommunityPost {
+  id           String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  authorId     String       @map("author_id") @db.Uuid
+  title        String
+  content      String
+  status       String       @default("active")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime     @default(now()) @map("updated_at") @db.Timestamp(6)
+  departmentId Int?         @map("department_id")
+  author       User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  department   Department?  @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  comments     PostComment[]
+  likes        PostLike[]
+
+  @@map("community_posts")
+}
+
+model PostComment {
+  id        String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  postId    String        @map("post_id") @db.Uuid
+  authorId  String        @map("author_id") @db.Uuid
+  content   String
+  status    String        @default("active")
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt DateTime      @default(now()) @map("updated_at") @db.Timestamp(6)
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("post_comments")
+}
+
+model PostLike {
+  id        String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  postId    String        @map("post_id") @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("post_likes")
+}
+
+model Event {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title       String
+  description String
+  date        DateTime @db.Timestamp(6)
+  location    String
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  @@map("events")
+}

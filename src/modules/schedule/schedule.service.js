@@ -83,8 +83,33 @@ export const getStudentSchedules = async (userId) => {
 
   const schedules = await scheduleRepository.findSchedulesByStudent(student.id);
   const exceptions = await scheduleRepository.findExceptionsByStudent(student.id);
+  const days = schedules.reduce((acc, schedule) => {
+    if (!acc[schedule.day_of_week]) {
+      acc[schedule.day_of_week] = [];
+    }
 
-  return { schedules, exceptions };
+    const matchingExceptions = exceptions.filter(
+      (exception) => String(exception.schedule_id) === String(schedule.schedule_id)
+    );
+
+    acc[schedule.day_of_week].push({
+      schedule_id: schedule.schedule_id,
+      offering_id: schedule.offering_id,
+      course_id: schedule.course_id,
+      course_code: schedule.course_code,
+      course_title: schedule.course_title,
+      section: schedule.section,
+      teacher_email: schedule.teacher_email,
+      room: schedule.room,
+      start_time: schedule.start_time,
+      end_time: schedule.end_time,
+      exceptions: matchingExceptions,
+    });
+
+    return acc;
+  }, {});
+
+  return { days, exceptions };
 };
 
 const combineDateAndTime = (dateStr, timeStr) => {

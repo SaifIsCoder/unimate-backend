@@ -13,18 +13,21 @@ router.use(authMiddleware);
 router.get(
   "/my",
   roleMiddleware(["student"]),
+  validate({ query: validation.getMyAssignmentsQuery }),
   asyncHandler(assignmentController.getMyAssignments)
 );
 
-router.post(
-  "/:id/submit",
-  roleMiddleware(["student"]),
-  asyncHandler(assignmentController.submitMyAssignment)
-);
+// router.post(
+//   "/:id/submit",
+//   roleMiddleware(["student"]),
+//   validate({ params: validation.idParams, body: validation.submitAssignmentSchema }),
+//   asyncHandler(assignmentController.submitMyAssignment)
+// );
 
 router.post(
   "/:id/progress",
   roleMiddleware(["student"]),
+  validate({ params: validation.idParams, body: validation.updateProgressSchema }),
   asyncHandler(assignmentController.updateMyAssignmentProgress)
 );
 
@@ -69,17 +72,17 @@ router.get(
   asyncHandler(assignmentController.getAssignmentDetails)
 );
 
-router.put(
-  "/:id/update-submission",
-  roleMiddleware(["student"]),
-  validate({ params: validation.idParams }),
-  asyncHandler(assignmentController.submitMyAssignment)
-);
+// router.put(
+//   "/:id/update-submission",
+//   roleMiddleware(["student"]),
+//   validate({ params: validation.idParams, body: validation.submitAssignmentSchema }),
+//   asyncHandler(assignmentController.submitMyAssignment)
+// );
 
-router.delete(
-  "/:id/submission",
-  roleMiddleware(["student"]),
-  validate({ params: validation.idParams }),
-  asyncHandler(assignmentController.deleteMyAssignmentSubmission)
-);
+// router.delete(
+//   "/:id/submission",
+//   roleMiddleware(["student"]),
+//   validate({ params: validation.idParams }),
+//   asyncHandler(assignmentController.deleteMyAssignmentSubmission)
+// );
 export default router;

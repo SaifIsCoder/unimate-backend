@@ -223,11 +223,38 @@ export const getMyGradesSummary = async (userId) => {
   const rawTranscript = await gradesRepository.findTranscriptDataForStudent(student.id);
   const transcript = academicRules.transformTranscriptData(rawTranscript);
 
+  const semesterGroups = transcript.courses.reduce((acc, course) => {
+    const key = course.semester || "Unknown";
+    if (!acc[key]) {
+      acc[key] = {
+        semester: key,
+        creditHours: 0,
+        qualityPoints: 0,
+      };
+    }
+
+    acc[key].creditHours += Number(course.credit_hours) || 0;
+    acc[key].qualityPoints += Number(course.quality_points) || 0;
+    return acc;
+  }, {});
+
+  const semesters = Object.values(semesterGroups).map((semester) => ({
+    semester: semester.semester,
+    creditHours: semester.creditHours,
+    sgpa: semester.creditHours
+      ? Number((semester.qualityPoints / semester.creditHours).toFixed(2))
+      : 0,
+  }));
+
+  const latestSemester = semesters[semesters.length - 1];
+
   return {
     cgpa: Number(transcript.cgpa.toFixed(2)) || 0.0,
+    sgpa: latestSemester?.sgpa || 0.0,
     totalCredits: transcript.total_credit_hours || 0,
     gpaGoal: Number(student.target_cgpa) || 3.0,
     studyIntensity: student.study_intensity || "balanced",
+    semesters,
     courses: transcript.courses.map(c => ({
       offering_id: c.offering_id,
       course_code: c.course_code,
@@ -287,4 +314,49 @@ export const updateGpaGoals = async (userId, targetCgpa, studyIntensity) => {
   `;
   const result = await pool.query(query, [targetCgpa, studyIntensity, student.id]);
   return result.rows[0];
+};
+
+export const getMyCourseGradeDetails = async (userId, courseId) => {
+  const student = await studentRepository.findByUserId(userId);
+  if (!student) {
+    throw new AppError("Student profile not found", 404);
+  }
+
+  const offering = await gradesRepository.findStudentCourseOffering(student.id, courseId);
+  if (!offering) {
+    throw new AppError("Course not found in student's active enrollments", 404);
+  }
+
+  const calculation = await calculateCourseGrade(student.id, offering.offering_id, {
+    id: userId,
+    role: "student",
+  });
+
+  const rawGrades = await gradesRepository.findGradesByStudentAndOffering(student.id, offering.offering_id);
+  const components = rawGrades.map((grade) => ({
+    id: grade.id,
+    assessmentType: grade.assessment_type,
+    title: grade.title,
+    score: Number(grade.score),
+    maxScore: Number(grade.max_score),
+    percentage: Number(((Number(grade.score) / Number(grade.max_score)) * 100).toFixed(2)),
+  }));
+
+  return {
+    offering_id: offering.offering_id,
+    course_id: offering.course_id,
+    course_code: offering.course_code,
+    course_title: offering.course_title,
+    semester: offering.semester,
+    section: offering.section,
+    credit_hours: offering.credit_hours,
+    weights: {
+      mid_term: Number(offering.mid_weight),
+      sessional: Number(offering.sessional_weight),
+      final_exam: Number(offering.final_weight),
+      practical: Number(offering.practical_weight),
+    },
+    components,
+    calculation,
+  };
 };

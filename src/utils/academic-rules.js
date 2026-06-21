@@ -1,42 +1,64 @@
-/**
- * UOS official grading bands (Absolute Grading System)
- * Marks are rounded UP before lookup.
- */
-const UOS_GRADE_SCALE = [
-  { min: 85, grade: "A+", gp: 4.0 },
-  { min: 80, grade: "A", gp: 4.0 },
-  { min: 75, grade: "B+", gp: 3.5 },
-  { min: 70, grade: "B", gp: 3.0 },
-  { min: 65, grade: "B-", gp: 2.67 },
-  { min: 60, grade: "C+", gp: 2.33 },
-  { min: 55, grade: "C", gp: 2.0 },
-  { min: 50, grade: "C-", gp: 1.67 },
-  { min: 40, grade: "D", gp: 1.0 },
-  { min: 0, grade: "F", gp: 0.0 },
-];
 
-/**
- * Calculates grade point and letter grade based on marks (0-100)
- * UOS Rule: Marks rounded UP (60.1 -> 61) before grading.
- */
+const UOS_GRADE_SCALE = {
+    79: { grade: "B+", gp: 3.94 },
+    78: { grade: "B+", gp: 3.87 },
+    77: { grade: "B+", gp: 3.80 },
+    76: { grade: "B+", gp: 3.74 },
+    75: { grade: "B+", gp: 3.67 },
+
+    74: { grade: "B", gp: 3.60 },
+    73: { grade: "B", gp: 3.54 },
+    72: { grade: "B", gp: 3.47 },
+    71: { grade: "B", gp: 3.40 },
+    70: { grade: "B", gp: 3.34 },
+
+    69: { grade: "B-", gp: 3.27 },
+    68: { grade: "B-", gp: 3.20 },
+    67: { grade: "B-", gp: 3.14 },
+    66: { grade: "B-", gp: 3.07 },
+    65: { grade: "B-", gp: 3.00 },
+
+    64: { grade: "C+", gp: 2.92 },
+    63: { grade: "C+", gp: 2.85 },
+    62: { grade: "C+", gp: 2.78 },
+    61: { grade: "C+", gp: 2.70 },
+    60: { grade: "C+", gp: 2.64 },
+
+    59: { grade: "C", gp: 2.57 },
+    58: { grade: "C", gp: 2.50 },
+    57: { grade: "C", gp: 2.43 },
+    56: { grade: "C", gp: 2.36 },
+    55: { grade: "C", gp: 2.30 },
+
+    54: { grade: "C-", gp: 2.24 },
+    53: { grade: "C-", gp: 2.18 },
+    52: { grade: "C-", gp: 2.12 },
+    51: { grade: "C-", gp: 2.06 },
+    50: { grade: "C-", gp: 2.00 },
+
+    49: { grade: "D", gp: 1.90 },
+    48: { grade: "D", gp: 1.80 },
+    47: { grade: "D", gp: 1.70 },
+    46: { grade: "D", gp: 1.60 },
+    45: { grade: "D", gp: 1.50 },
+    44: { grade: "D", gp: 1.40 },
+    43: { grade: "D", gp: 1.30 },
+    42: { grade: "D", gp: 1.20 },
+    41: { grade: "D", gp: 1.10 },
+    40: { grade: "D", gp: 1.00 },
+  };
+
 export const getGradePointDetails = (marks) => {
-  const roundedMarks = Math.ceil(marks);
-  for (const band of UOS_GRADE_SCALE) {
-    if (roundedMarks >= band.min) {
-      return band;
-    }
-  }
-  return { min: 0, grade: "F", gp: 0.0 };
-};
+  const m = Math.max(0, Math.ceil(Number(marks)));
 
-/**
- * Backward compatibility for getGradePoint
- */
+  if (m >= 85) return { grade: "A+", gp: 4.00 };
+  if (m >= 80) return { grade: "A", gp: 4.00 };
+
+  return UOS_GRADE_SCALE[m] || { grade: "F", gp: 0.00 };
+};
 export const getGradePoint = (marks) => getGradePointDetails(marks).gp;
 
-/**
- * Calculates raw marks based on component percentages and custom weights
- */
+
 export const calculateRawMarks = (components, weights) => {
   const { midTerm, sessional, finalExam, practical } = components;
   const {

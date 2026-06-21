@@ -17,6 +17,13 @@ router.get(
 );
 
 router.get(
+  "/my/course/:courseId",
+  roleMiddleware(["student"]),
+  validate({ params: validation.myCourseParams }),
+  asyncHandler(gradesController.getMyCourseGradeDetails)
+);
+
+router.get(
   "/all-semesters",
   roleMiddleware(["student"]),
   asyncHandler(gradesController.getMyAllSemesters)

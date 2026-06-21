@@ -27,12 +27,7 @@ router.patch(
   asyncHandler(controller.markAsRead)
 );
 
-// Mobile alignment aliases
-router.post(
-  "/:id/read",
-  validate({ params: validation.idParams }),
-  asyncHandler(controller.markAsRead)
-);
+
 
 router.patch(
   "/read-all",

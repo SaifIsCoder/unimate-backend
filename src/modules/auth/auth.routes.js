@@ -58,10 +58,6 @@ router.post(
   asyncHandler(controller.loginUnified),
 );
 
-router.post(
-  "/refresh",
-  asyncHandler(controller.refreshUnified),
-);
 
 router.post(
   "/refresh-token",

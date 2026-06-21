@@ -101,3 +101,31 @@ export const findTranscriptDataForStudent = async (studentId, client = pool) => 
   const result = await client.query(query, [studentId]);
   return result.rows;
 };
+
+export const findStudentCourseOffering = async (studentId, courseId, client = pool) => {
+  const query = `
+    SELECT
+      e.id AS enrollment_id,
+      e.status AS enrollment_status,
+      co.id AS offering_id,
+      co.course_id,
+      co.semester,
+      co.section,
+      co.mid_weight,
+      co.sessional_weight,
+      co.final_weight,
+      co.practical_weight,
+      c.code AS course_code,
+      c.title AS course_title,
+      c.credit_hours,
+      c.has_practical
+    FROM enrollments e
+    JOIN course_offerings co ON co.id = e.offering_id
+    JOIN courses c ON c.id = co.course_id
+    WHERE e.student_id = $1 AND co.course_id = $2 AND e.status = 'enrolled'
+    ORDER BY e.enrolled_at DESC
+    LIMIT 1
+  `;
+  const result = await client.query(query, [studentId, courseId]);
+  return result.rows[0] || null;
+};

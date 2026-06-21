@@ -23,3 +23,17 @@ export const idParams = Joi.object({
 export const offeringIdParams = Joi.object({
   offeringId: Joi.string().uuid().required(),
 });
+
+export const getMyAssignmentsQuery = Joi.object({
+  status: Joi.string().valid("pending", "done", "overdue").optional(),
+});
+
+export const submitAssignmentSchema = Joi.object({
+  fileUrl: Joi.string().uri().allow(null, "").optional(),
+  textContent: Joi.string().trim().allow(null, "").optional(),
+}).or("fileUrl", "textContent");
+
+export const updateProgressSchema = Joi.object({
+  progress: Joi.number().integer().min(0).max(100).required(),
+  status: Joi.string().valid("pending", "done", "overdue").optional(),
+});

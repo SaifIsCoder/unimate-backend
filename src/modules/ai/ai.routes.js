@@ -35,6 +35,28 @@ router.post(
   asyncHandler(aiController.prioritizeTasks)
 );
 
+router.post(
+  "/gpa-goal",
+  asyncHandler(aiController.getGpaGoal)
+);
+
+router.get(
+  "/attendance-guardian",
+  asyncHandler(aiController.getAttendanceGuardian)
+);
+
+router.get(
+  "/smart-schedule",
+  asyncHandler(aiController.getSmartSchedule)
+);
+
+router.get(
+  "/skill-trends",
+  asyncHandler(aiController.getSkillTrends)
+);
+
+
+
 router.get(
   "/announcements/summary",
   asyncHandler(aiController.getAnnouncementsSummary)

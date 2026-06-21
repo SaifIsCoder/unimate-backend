@@ -36,7 +36,7 @@ export const markAsDone = async (req, res) => {
 // ── Mobile Student Assignment Controllers ────────────────────────────────────────
 
 export const getMyAssignments = async (req, res) => {
-  const data = await assignmentService.getMyAssignments(req.user.id);
+  const data = await assignmentService.getMyAssignments(req.user.id, req.query.status);
   return sendSuccess(res, data);
 };
 
@@ -47,18 +47,18 @@ export const updateMyAssignmentProgress = async (req, res) => {
   return sendSuccess(res, result);
 };
 
-export const submitMyAssignment = async (req, res) => {
-  const { fileUrl, textContent } = req.body;
-  const result = await assignmentService.submitMyAssignment(req.user.id, req.params.id, fileUrl, textContent);
-  return sendSuccess(res, result);
-};
+// export const submitMyAssignment = async (req, res) => {
+//   const { fileUrl, textContent } = req.body;
+//   const result = await assignmentService.submitMyAssignment(req.user.id, req.params.id, fileUrl, textContent);
+//   return sendSuccess(res, result);
+// };
 
 export const getAssignmentDetails = async (req, res) => {
   const details = await assignmentService.getAssignmentDetails(req.params.id, req.user);
   return sendSuccess(res, details);
 };
 
-export const deleteMyAssignmentSubmission = async (req, res) => {
-  const result = await assignmentService.deleteMyAssignmentSubmission(req.user.id, req.params.id);
-  return sendSuccess(res, result);
-};
+// export const deleteMyAssignmentSubmission = async (req, res) => {
+//   const result = await assignmentService.deleteMyAssignmentSubmission(req.user.id, req.params.id);
+//   return sendSuccess(res, result);
+// };

@@ -41,3 +41,8 @@ export const updateGpaGoals = async (req, res) => {
   const result = await gradesService.updateGpaGoals(req.user.id, targetCgpa, studyIntensity);
   return sendSuccess(res, result);
 };
+
+export const getMyCourseGradeDetails = async (req, res) => {
+  const data = await gradesService.getMyCourseGradeDetails(req.user.id, req.params.courseId);
+  return sendSuccess(res, data);
+};

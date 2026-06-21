@@ -140,7 +140,7 @@ export const markAsDone = async (id, user) => {
 
 // ── Mobile Student Assignment Service Methods ────────────────────────────────────
 
-export const getMyAssignments = async (userId) => {
+export const getMyAssignments = async (userId, statusFilter) => {
   const student = await studentRepository.findByUserId(userId);
   if (!student) {
     throw new AppError("Student profile not found", 404);
@@ -148,8 +148,8 @@ export const getMyAssignments = async (userId) => {
 
   const list = await assignmentRepository.findAssignmentsByStudent(student.id);
   const now = new Date();
-  
-  return list.map(item => {
+
+  const assignments = list.map(item => {
     let status = item.status;
     if (status === 'pending' && new Date(item.due) < now) {
       status = 'overdue';
@@ -171,6 +171,12 @@ export const getMyAssignments = async (userId) => {
       submittedAt: item.submitted_at
     };
   });
+
+  if (!statusFilter) {
+    return assignments;
+  }
+
+  return assignments.filter((assignment) => assignment.status === statusFilter);
 };
 
 export const updateMyAssignmentProgress = async (userId, assignmentId, progress, status) => {
@@ -187,19 +193,23 @@ export const updateMyAssignmentProgress = async (userId, assignmentId, progress,
   return assignmentRepository.upsertAssignmentProgress(student.id, assignmentId, progress, status);
 };
 
-export const submitMyAssignment = async (userId, assignmentId, fileUrl, textContent) => {
-  const student = await studentRepository.findByUserId(userId);
-  if (!student) {
-    throw new AppError("Student profile not found", 404);
-  }
+// export const submitMyAssignment = async (userId, assignmentId, fileUrl, textContent) => {
+//   const student = await studentRepository.findByUserId(userId);
+//   if (!student) {
+//     throw new AppError("Student profile not found", 404);
+//   }
 
-  const assignment = await assignmentRepository.findAssignmentById(assignmentId);
-  if (!assignment) {
-    throw new AppError("Assignment not found", 404);
-  }
+//   const assignment = await assignmentRepository.findAssignmentById(assignmentId);
+//   if (!assignment) {
+//     throw new AppError("Assignment not found", 404);
+//   }
 
-  return assignmentRepository.upsertAssignmentSubmission(student.id, assignmentId, fileUrl, textContent);
-};
+//   if (!fileUrl && !textContent) {
+//     throw new AppError("Either fileUrl or textContent is required", 400);
+//   }
+
+//   return assignmentRepository.upsertAssignmentSubmission(student.id, assignmentId, fileUrl, textContent);
+// };
 
 export const getAssignmentDetails = async (assignmentId, user) => {
   if (user.role === "student") {
@@ -256,21 +266,21 @@ export const getAssignmentDetails = async (assignmentId, user) => {
   }
 };
 
-export const deleteMyAssignmentSubmission = async (userId, assignmentId) => {
-  const student = await studentRepository.findByUserId(userId);
-  if (!student) {
-    throw new AppError("Student profile not found", 404);
-  }
+// export const deleteMyAssignmentSubmission = async (userId, assignmentId) => {
+//   const student = await studentRepository.findByUserId(userId);
+//   if (!student) {
+//     throw new AppError("Student profile not found", 404);
+//   }
 
-  const assignment = await assignmentRepository.findAssignmentById(assignmentId);
-  if (!assignment) {
-    throw new AppError("Assignment not found", 404);
-  }
+//   const assignment = await assignmentRepository.findAssignmentById(assignmentId);
+//   if (!assignment) {
+//     throw new AppError("Assignment not found", 404);
+//   }
 
-  const deleted = await assignmentRepository.deleteAssignmentSubmission(student.id, assignmentId);
-  if (!deleted) {
-    throw new AppError("Submission not found", 404);
-  }
+//   const deleted = await assignmentRepository.deleteAssignmentSubmission(student.id, assignmentId);
+//   if (!deleted) {
+//     throw new AppError("Submission not found", 404);
+//   }
 
-  return { message: "Submission withdrawn successfully" };
-};
+//   return { message: "Submission withdrawn successfully" };
+// };

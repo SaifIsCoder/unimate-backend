@@ -30,6 +30,7 @@ export const createAdmin = async (payload) => {
   return adminRepository.create(payload);
 };
 
+// get a admins
 export const getAdmins = async () => {
   return adminRepository.findAll();
 };

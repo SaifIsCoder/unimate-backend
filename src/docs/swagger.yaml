@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
   title: UniMate API Documentation
-  version: 1.0.0
+  version: 1.1.0
   description: Production API documentation for the UniMate Academic Management System.
 servers:
   - url: /api/v1

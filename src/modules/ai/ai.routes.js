@@ -6,7 +6,6 @@ import * as aiController from "./ai.controller.js";
 
 const router = Router();
 
-// Secure AI module for authorized student-only roles
 router.use(authMiddleware);
 router.use(roleMiddleware(["student"]));
 

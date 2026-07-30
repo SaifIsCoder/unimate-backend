@@ -1,11 +1,12 @@
 import { AppError } from "../utils/app-error.js";
+import { hasRole } from "../constants/roles.js";
 import logger from "../config/logger.js";
 
 const roleMiddleware = (roles = []) => (req, res, next) => {
   if (!req.user) {
     return next(new AppError("Authentication is required", 401));
   }
-  if (!roles.includes(req.user.role)) {
+  if (!hasRole(req.user.role, roles)) {
     logger.warn({
       event: "FORBIDDEN_ACCESS",
       userId: req.user.id,

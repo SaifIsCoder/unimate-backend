@@ -17,12 +17,18 @@ router.get(
   asyncHandler(assignmentController.getMyAssignments)
 );
 
-// router.post(
-//   "/:id/submit",
-//   roleMiddleware(["student"]),
-//   validate({ params: validation.idParams, body: validation.submitAssignmentSchema }),
-//   asyncHandler(assignmentController.submitMyAssignment)
-// );
+router.get(
+  "/my/submissions",
+  roleMiddleware(["student"]),
+  asyncHandler(assignmentController.getMySubmissions)
+);
+
+router.post(
+  "/:id/submit",
+  roleMiddleware(["student"]),
+  validate({ params: validation.idParams, body: validation.submitAssignmentSchema }),
+  asyncHandler(assignmentController.submitMyAssignment)
+);
 
 router.post(
   "/:id/progress",
@@ -36,6 +42,13 @@ router.post(
   roleMiddleware(["admin", "teacher"]),
   validate({ body: validation.createAssignmentSchema }),
   asyncHandler(assignmentController.createAssignment)
+);
+
+router.get(
+  "/",
+  roleMiddleware(["admin", "teacher"]),
+  validate({ query: validation.getAssignmentsQuery }),
+  asyncHandler(assignmentController.getAssignments)
 );
 
 router.get(

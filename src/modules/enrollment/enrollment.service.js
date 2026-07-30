@@ -5,6 +5,7 @@ import { withTransaction } from "../../utils/transaction.js";
 import * as enrollmentRepository from "./enrollment.repository.js";
 import * as offeringRepository from "../offering/offering.repository.js";
 import * as studentRepository from "../student/student.repository.js";
+import * as authHelpers from "../../utils/auth.helpers.js";
 import { logAudit } from "../../utils/audit.js";
 
 const ACTIVE_ENROLLMENT_STATUSES = [ENROLLED];
@@ -90,8 +91,12 @@ export const getEnrollmentsByStudent = async (studentId, options) => {
   return enrollmentRepository.findByStudent(studentId, options);
 };
 
-export const getEnrollmentsByOffering = async (offeringId, options) => {
-  await assertOfferingExists(offeringId);
+export const getEnrollmentsByOffering = async (offeringId, options, user) => {
+  const offering = await assertOfferingExists(offeringId);
+
+  if (user) {
+    await authHelpers.assertAccessToOffering(user, offering);
+  }
 
   return enrollmentRepository.findByOffering(offeringId, options);
 };

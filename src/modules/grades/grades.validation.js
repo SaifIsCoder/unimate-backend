@@ -51,3 +51,11 @@ export const paginationQuery = Joi.object({
 export const myCourseParams = Joi.object({
   courseId: Joi.string().uuid().required(),
 });
+
+// Both columns are written with COALESCE, so either field alone is a valid
+// partial update — but sending neither is a no-op and is rejected.
+// study_intensity is a free-text column (no DB enum), so it is only length-bounded.
+export const updateGpaGoalsSchema = Joi.object({
+  targetCgpa: Joi.number().min(0).max(4),
+  studyIntensity: Joi.string().trim().max(30),
+}).min(1);

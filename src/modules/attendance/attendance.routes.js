@@ -16,6 +16,13 @@ router.get(
   asyncHandler(attendanceController.getMyAttendanceSummary)
 );
 
+// Alias: the mobile client is configured to call GET /attendance/my
+router.get(
+  "/my",
+  roleMiddleware(["student"]),
+  asyncHandler(attendanceController.getMyAttendanceSummary)
+);
+
 router.post(
   "/",
   roleMiddleware(["admin", "teacher"]),

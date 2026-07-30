@@ -1,5 +1,5 @@
 import express from "express";
-import { ADMIN } from "../../constants/roles.js";
+import { ADMIN, TEACHER } from "../../constants/roles.js";
 import authMiddleware from "../../middlewares/auth.middleware.js";
 import roleMiddleware from "../../middlewares/role.middleware.js";
 import validate from "../../middlewares/validate.middleware.js";
@@ -17,7 +17,19 @@ import {
 
 const router = express.Router();
 
-router.use(authMiddleware, roleMiddleware([ADMIN]));
+router.use(authMiddleware);
+
+// Class roster — a teacher needs this to resolve the student_ids required by
+// POST /grades and POST /attendance. Ownership of the offering is enforced in
+// the service layer via assertAccessToOffering.
+router.get(
+  "/offering/:offeringId",
+  roleMiddleware([ADMIN, TEACHER]),
+  validate({ params: offeringIdParams, query: paginationQuery }),
+  asyncHandler(controller.getEnrollmentsByOffering),
+);
+
+router.use(roleMiddleware([ADMIN]));
 
 router.post(
   "/",
@@ -33,11 +45,6 @@ router.get(
   "/student/:studentId",
   validate({ params: studentIdParams, query: paginationQuery }),
   asyncHandler(controller.getEnrollmentsByStudent),
-);
-router.get(
-  "/offering/:offeringId",
-  validate({ params: offeringIdParams, query: paginationQuery }),
-  asyncHandler(controller.getEnrollmentsByOffering),
 );
 router.get(
   "/:id",

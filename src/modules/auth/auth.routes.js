@@ -7,7 +7,9 @@ import * as controller from "./auth.controller.js";
 import {
   emptyQuery,
   loginBody,
+  refreshTokenBody,
   resetPasswordBody,
+  setPasswordBody,
 } from "./auth.validation.js";
 
 const router = express.Router();
@@ -61,6 +63,14 @@ router.post(
 
 router.post(
   "/refresh-token",
+  validate({ query: emptyQuery, body: refreshTokenBody }),
+  asyncHandler(controller.refreshUnified),
+);
+
+// Alias: the mobile client is configured to call POST /auth/refresh
+router.post(
+  "/refresh",
+  validate({ query: emptyQuery, body: refreshTokenBody }),
   asyncHandler(controller.refreshUnified),
 );
 
@@ -72,6 +82,7 @@ router.post(
 router.post(
   "/set-password",
   authMiddleware,
+  validate({ query: emptyQuery, body: setPasswordBody }),
   asyncHandler(controller.setPassword),
 );
 

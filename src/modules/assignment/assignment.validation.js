@@ -28,6 +28,13 @@ export const getMyAssignmentsQuery = Joi.object({
   status: Joi.string().valid("pending", "done", "overdue").optional(),
 });
 
+export const getAssignmentsQuery = Joi.object({
+  offering_id: Joi.string().uuid().optional(),
+  is_done: Joi.boolean().optional(),
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+});
+
 export const submitAssignmentSchema = Joi.object({
   fileUrl: Joi.string().uri().allow(null, "").optional(),
   textContent: Joi.string().trim().allow(null, "").optional(),

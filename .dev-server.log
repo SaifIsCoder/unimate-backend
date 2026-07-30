@@ -1,0 +1,48 @@
+
+> unimate-backend@1.0.0 dev
+> nodemon src/server.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node src/server.js`[39m
+◇ injected env (6) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+Firebase Admin SDK initialized successfully.
+[2026-07-24 19:03:31.373 +0500] [32mINFO[39m: [36mServer running on port 5000 in development mode[39m
+[2026-07-24 19:03:32.354 +0500] [32mINFO[39m: [36mrequest completed[39m
+    [35mreq[39m: {
+      "method": "GET",
+      "url": "/api/v1/health",
+      "query": {},
+      "id": "6d9b39bd-7a3b-49bd-95e9-ad990a34b4c5"
+    }
+    [35mres[39m: {
+      "statusCode": 200,
+      "headers": {
+        "content-security-policy": "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "origin-agent-cluster": "?1",
+        "referrer-policy": "no-referrer",
+        "strict-transport-security": "max-age=31536000; includeSubDomains",
+        "x-content-type-options": "nosniff",
+        "x-dns-prefetch-control": "off",
+        "x-download-options": "noopen",
+        "x-frame-options": "SAMEORIGIN",
+        "x-permitted-cross-domain-policies": "none",
+        "x-xss-protection": "0",
+        "ratelimit-policy": "100;w=900",
+        "ratelimit-limit": "100",
+        "ratelimit-remaining": "99",
+        "ratelimit-reset": "900",
+        "x-request-id": "6d9b39bd-7a3b-49bd-95e9-ad990a34b4c5",
+        "access-control-allow-origin": "http://localhost:3000",
+        "vary": "Origin",
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "39",
+        "etag": "W/\"27-5Lv4A70/4CVfgLL4ZV+Wlb/d0e0\""
+      }
+    }
+    [35mresponseTime[39m: 7
+[2026-07-24 19:03:34.503 +0500] [32mINFO[39m: [36mDatabase connected at Fri Jul 24 2026 19:03:32 GMT+0500 (Pakistan Standard Time)[39m

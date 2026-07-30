@@ -1,0 +1,3928 @@
+{
+  "api_collection": {
+    "version": "1.0",
+    "base_url": "http://localhost:5000/api/v1",
+    "notes": {
+      "server": "Express app in server/src/app.js. PORT defaults to 5000 (env.port). All module routes are mounted under /api/v1 via server/src/routes/index.js.",
+      "envelope": "Every handler responds through utils/response.js. Success = { success: true, data: <payload> }. Error = { success: false, error: { message, type, code } }.",
+      "auth": "JWT HS256 signed with JWT_SECRET. Access token expires in 1d, refresh token in 7d. Sent as 'Authorization: Bearer <token>'. middlewares/auth.middleware.js re-checks the user still exists and is_active on every request.",
+      "roles": "super_admin inherits admin (constants/roles.js). Any gate listing 'admin' also accepts 'super_admin'.",
+      "validation": "Joi via middlewares/validate.middleware.js with stripUnknown:true and allowUnknown:false — unknown body/query keys are stripped, schema violations return 400.",
+      "rate_limits": "Global: 100 requests / 15 min per IP. Login routes (/auth/login/*, /auth/login): 5 requests / 15 min per IP.",
+      "cors": "Origin restricted to env FRONTEND_URL (default http://localhost:3000)."
+    },
+    "endpoints": [
+      {
+        "name": "Service root",
+        "path": "/",
+        "method": "GET",
+        "description": "Unversioned service banner. Mounted on the app root, outside the /api/v1 prefix.",
+        "headers": {},
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "message": "Unimate backend is running",
+            "api": {
+              "currentVersion": "v1",
+              "baseUrl": "/api/v1",
+              "health": "/api/v1/health"
+            }
+          }
+        }
+      },
+      {
+        "name": "API version discovery",
+        "path": "/api",
+        "method": "GET",
+        "description": "Lists supported API versions. Mounted outside the /api/v1 prefix.",
+        "headers": {},
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "versions": [
+              "v1"
+            ],
+            "currentVersion": "v1",
+            "baseUrl": "/api/v1"
+          }
+        }
+      },
+      {
+        "name": "Health check",
+        "path": "/api/v1/health",
+        "method": "GET",
+        "description": "Liveness probe. No authentication required.",
+        "headers": {},
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "status": "ok"
+          }
+        }
+      },
+      {
+        "name": "Swagger UI",
+        "path": "/api/v1/docs",
+        "method": "GET",
+        "description": "swagger-ui-express rendering of src/docs/swagger.yaml. Returns HTML, not JSON.",
+        "headers": {},
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": null
+      },
+      {
+        "name": "Login (admin portal)",
+        "path": "/api/v1/auth/login/admin",
+        "method": "POST",
+        "description": "Authenticates an admin or super_admin. Rejects any other role with a generic 'Invalid credentials' 401. Rate limited to 5 attempts / 15 min per IP.",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "email": "admin@unimate.edu",
+          "password": "StrongPass!23"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "user": {
+              "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "email": "admin@unimate.edu",
+              "role": "admin",
+              "is_active": true,
+              "password_changed": true
+            }
+          }
+        }
+      },
+      {
+        "name": "Login (student portal)",
+        "path": "/api/v1/auth/login/student",
+        "method": "POST",
+        "description": "Authenticates a student. Initial password is the student's roll_number until the one-time reset is performed. Rate limited to 5 attempts / 15 min per IP.",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "email": "ali.raza@unimate.edu",
+          "password": "FA21-BCS-001"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "user": {
+              "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "email": "ali.raza@unimate.edu",
+              "role": "student",
+              "is_active": true,
+              "password_changed": false
+            }
+          }
+        }
+      },
+      {
+        "name": "Login (teacher portal)",
+        "path": "/api/v1/auth/login/teacher",
+        "method": "POST",
+        "description": "Authenticates a teacher. Initial password is the teacher's employee_id until the one-time reset is performed. Rate limited to 5 attempts / 15 min per IP.",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "email": "sana.khan@unimate.edu",
+          "password": "EMP-1042"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "user": {
+              "id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+              "email": "sana.khan@unimate.edu",
+              "role": "teacher",
+              "is_active": true,
+              "password_changed": false
+            }
+          }
+        }
+      },
+      {
+        "name": "Unified login (mobile / web)",
+        "path": "/api/v1/auth/login",
+        "method": "POST",
+        "description": "Role-agnostic login used by the mobile client. Returns both an access token and a refresh token. Rate limited to 5 attempts / 15 min per IP.",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "email": "ali.raza@unimate.edu",
+          "password": "StrongPass!23"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "expiresIn": 86400,
+            "role": "student",
+            "user": {
+              "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "email": "ali.raza@unimate.edu",
+              "role": "student",
+              "is_active": true,
+              "password_changed": true
+            }
+          }
+        }
+      },
+      {
+        "name": "Refresh access token",
+        "path": "/api/v1/auth/refresh-token",
+        "method": "POST",
+        "description": "Exchanges a refresh token for a new access + refresh token pair. The token must carry type='refresh'. A missing or non-string refreshToken is rejected with 400; a syntactically valid but expired/invalid token is 401.",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "expiresIn": 86400,
+            "role": "student",
+            "user": {
+              "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "email": "ali.raza@unimate.edu",
+              "role": "student",
+              "is_active": true,
+              "password_changed": true
+            }
+          }
+        }
+      },
+      {
+        "name": "Refresh access token (mobile alias)",
+        "path": "/api/v1/auth/refresh",
+        "method": "POST",
+        "description": "Alias of POST /auth/refresh-token; the mobile client is configured to call this path. Same controller (refreshUnified) and same validation.",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "expiresIn": 86400,
+            "role": "student",
+            "user": {
+              "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "email": "ali.raza@unimate.edu",
+              "role": "student",
+              "is_active": true,
+              "password_changed": true
+            }
+          }
+        }
+      },
+      {
+        "name": "Logout",
+        "path": "/api/v1/auth/logout",
+        "method": "POST",
+        "description": "Stateless acknowledgement — no server-side token revocation is performed. The client is expected to discard its tokens.",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {},
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "message": "Logged out successfully"
+          }
+        }
+      },
+      {
+        "name": "One-time password reset",
+        "path": "/api/v1/auth/reset-password",
+        "method": "POST",
+        "description": "Students and teachers only. Allowed exactly once — fails with 403 if users.password_changed is already true. Admins are rejected with 403.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "password": "StrongPass!23"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "message": "Password updated successfully"
+          }
+        }
+      },
+      {
+        "name": "Set password (mobile alias)",
+        "path": "/api/v1/auth/set-password",
+        "method": "POST",
+        "description": "Same one-time reset as /auth/reset-password. Accepts either 'newPassword' or 'password' (newPassword wins); at least one is required and both are held to the same strength rule as /auth/reset-password.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "newPassword": "StrongPass!23"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "message": "Password updated successfully"
+          }
+        }
+      },
+      {
+        "name": "Current authenticated profile (auth module)",
+        "path": "/api/v1/auth/me",
+        "method": "GET",
+        "description": "Delegates to userService.getMe — returns a role-shaped dashboard profile, not the raw users row.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "name": "Ali Raza",
+            "registrationNumber": "FA21-BCS-001",
+            "cgpa": 3.42,
+            "creditsEnrolled": 18,
+            "averageAttendance": 88.75,
+            "personal": {
+              "email": "ali.raza@unimate.edu",
+              "phone": "+92-300-1234567",
+              "address": "House 12, Street 4, Lahore"
+            },
+            "guardian": {
+              "fatherName": "Raza Ahmed",
+              "phone": "+92-300-7654321",
+              "emergencyPhone": "+92-321-1112223"
+            },
+            "targetCgpa": 3.7,
+            "studyIntensity": "balanced"
+          }
+        }
+      },
+      {
+        "name": "Current authenticated profile (user module)",
+        "path": "/api/v1/users/me",
+        "method": "GET",
+        "description": "Role-shaped self profile. Students get academic + guardian data, teachers get { name, employeeId, departmentId, personal }, admins get { name, adminId, departmentId, departmentName, personal }.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "name": "Sana Khan",
+            "employeeId": "EMP-1042",
+            "personal": {
+              "email": "sana.khan@unimate.edu"
+            },
+            "departmentId": 1
+          }
+        }
+      },
+      {
+        "name": "Create user (+ role profile)",
+        "path": "/api/v1/users",
+        "method": "POST",
+        "description": "Admin / super_admin only. Creates the users row and the matching student, teacher or admin profile row in one transaction. Only a super_admin may create admin or super_admin accounts. Conditional fields: roll_number/batch are required-or-forbidden by role=student, employee_id by role=teacher, admin_id by role=admin|super_admin; department_id is required for all four roles.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "email": "ali.raza@unimate.edu",
+          "role": "student",
+          "password": "StrongPass!23",
+          "is_active": true,
+          "department_id": 1,
+          "roll_number": "FA21-BCS-001",
+          "batch": 2021
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "email": "ali.raza@unimate.edu",
+            "role": "student",
+            "is_active": true,
+            "password_changed": false,
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List users",
+        "path": "/api/v1/users",
+        "method": "GET",
+        "description": "Admin / super_admin only. Returns every user with password_hash excluded. Not paginated.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "email": "ali.raza@unimate.edu",
+              "role": "student",
+              "is_active": true,
+              "created_at": "2026-07-28T09:12:00.000Z",
+              "updated_at": "2026-07-28T09:12:00.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get user by id",
+        "path": "/api/v1/users/:id",
+        "method": "GET",
+        "description": "Admin / super_admin only. 404 if the user does not exist.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - users.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "email": "ali.raza@unimate.edu",
+            "role": "student",
+            "is_active": true,
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Update user",
+        "path": "/api/v1/users/:id",
+        "method": "PATCH",
+        "description": "Admin / super_admin only. At least one field required. 'role' may only be set to admin, student or teacher (super_admin is not assignable here). A supplied password is bcrypt-hashed with cost 12. 409 if the email is taken.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - users.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "email": "ali.raza.new@unimate.edu",
+          "password": "AnotherPass!45",
+          "role": "student",
+          "is_active": true
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "email": "ali.raza.new@unimate.edu",
+            "role": "student",
+            "is_active": true,
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T10:02:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Deactivate user (soft delete)",
+        "path": "/api/v1/users/:id",
+        "method": "DELETE",
+        "description": "Admin / super_admin only. Soft delete — sets is_active = false rather than removing the row.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - users.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "email": "ali.raza@unimate.edu",
+            "role": "student",
+            "is_active": false,
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T11:30:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "My student profile",
+        "path": "/api/v1/students/me",
+        "method": "GET",
+        "description": "Student role only. Returns the raw students row for the authenticated user. 404 if no student profile exists.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "roll_number": "FA21-BCS-001",
+            "department_id": 1,
+            "batch": 2021,
+            "phone": "+92-300-1234567",
+            "address": "House 12, Street 4, Lahore",
+            "father_name": "Raza Ahmed",
+            "guardian_phone": "+92-300-7654321",
+            "emergency_phone": "+92-321-1112223",
+            "target_cgpa": "3.70",
+            "study_intensity": "balanced",
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "My enrollments",
+        "path": "/api/v1/students/me/enrollments",
+        "method": "GET",
+        "description": "Student role only. Enrollments of the authenticated student, joined with offering and course details.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "e1111111-2222-4333-8444-555555555555",
+              "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+              "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "status": "enrolled",
+              "enrolled_at": "2026-02-01T05:00:00.000Z",
+              "semester": "Fall 2026",
+              "section": "A",
+              "course_id": "c0ffee00-1111-4222-8333-444444444444",
+              "course_code": "CS-201",
+              "course_title": "Data Structures"
+            }
+          ]
+        }
+      },
+      {
+        "name": "List students",
+        "path": "/api/v1/students",
+        "method": "GET",
+        "description": "Admin only. All student profiles joined with user email/role and department name/code. Not paginated.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+              "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "roll_number": "FA21-BCS-001",
+              "department_id": 1,
+              "batch": 2021,
+              "target_cgpa": "3.70",
+              "study_intensity": "balanced",
+              "email": "ali.raza@unimate.edu",
+              "role": "student",
+              "department_name": "Computer Science",
+              "department_code": "CS"
+            }
+          ]
+        }
+      },
+      {
+        "name": "List students by semester",
+        "path": "/api/v1/students/semester/:semester",
+        "method": "GET",
+        "description": "Admin only. Students actively enrolled in offerings of the given semester, with their enrollments aggregated as a JSON array. The :semester segment is matched verbatim against course_offerings.semester (validated as a 1-50 char string).",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "semester": "string (required, 1-50 chars) - course_offerings.semester value, e.g. 'Fall 2026'"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+              "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "roll_number": "FA21-BCS-001",
+              "department_id": 1,
+              "batch": 2021,
+              "email": "ali.raza@unimate.edu",
+              "department_name": "Computer Science",
+              "enrollments": [
+                {
+                  "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                  "course_title": "Data Structures",
+                  "course_code": "CS-201",
+                  "section": "A",
+                  "teacher": "sana.khan@unimate.edu"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get student enrollments by student id",
+        "path": "/api/v1/students/:id/enrollments",
+        "method": "GET",
+        "description": "Admin only. 404 if the student profile does not exist.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - students.id (profile id, not user id)"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "e1111111-2222-4333-8444-555555555555",
+              "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+              "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "status": "enrolled",
+              "semester": "Fall 2026",
+              "section": "A",
+              "course_id": "c0ffee00-1111-4222-8333-444444444444",
+              "course_code": "CS-201",
+              "course_title": "Data Structures"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get student by id",
+        "path": "/api/v1/students/:id",
+        "method": "GET",
+        "description": "Admin only. Student profile joined with user and department. 404 if not found.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - students.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "roll_number": "FA21-BCS-001",
+            "department_id": 1,
+            "batch": 2021,
+            "email": "ali.raza@unimate.edu",
+            "role": "student",
+            "department_name": "Computer Science",
+            "department_code": "CS"
+          }
+        }
+      },
+      {
+        "name": "Update student profile",
+        "path": "/api/v1/students/:id",
+        "method": "PATCH",
+        "description": "Admin only. At least one field required. Note: the schema exposes a legacy free-text 'department' field, not department_id.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - students.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "roll_number": "FA21-BCS-002",
+          "department": "Computer Science",
+          "batch": 2021
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "roll_number": "FA21-BCS-002",
+            "batch": 2021,
+            "department_id": 1
+          }
+        }
+      },
+      {
+        "name": "Delete student profile",
+        "path": "/api/v1/students/:id",
+        "method": "DELETE",
+        "description": "Admin only. Hard delete of the students row.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - students.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "message": "Student profile deleted successfully"
+          }
+        }
+      },
+      {
+        "name": "My teacher profile",
+        "path": "/api/v1/teachers/me",
+        "method": "GET",
+        "description": "Teacher role only. Raw teachers row for the authenticated user. 404 if no teacher profile exists.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+            "user_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+            "employee_id": "EMP-1042",
+            "department_id": 1,
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "My course offerings",
+        "path": "/api/v1/teachers/me/offerings",
+        "method": "GET",
+        "description": "Teacher role only. Every course_offering assigned to the authenticated teacher.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "course_id": "c0ffee00-1111-4222-8333-444444444444",
+              "teacher_id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+              "semester": "Fall 2026",
+              "section": "A",
+              "capacity": 60,
+              "mid_weight": 30,
+              "sessional_weight": 20,
+              "final_weight": 50,
+              "practical_weight": 0,
+              "course_code": "CS-201",
+              "course_title": "Data Structures"
+            }
+          ]
+        }
+      },
+      {
+        "name": "List teachers",
+        "path": "/api/v1/teachers",
+        "method": "GET",
+        "description": "Admin only. All teacher profiles joined with user and department. Not paginated.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+              "user_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+              "employee_id": "EMP-1042",
+              "department_id": 1,
+              "email": "sana.khan@unimate.edu",
+              "role": "teacher",
+              "department_name": "Computer Science",
+              "department_code": "CS"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get teacher offerings by teacher id",
+        "path": "/api/v1/teachers/:id/offerings",
+        "method": "GET",
+        "description": "Admin only. 404 if the teacher profile does not exist.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - teachers.id (profile id, not user id)"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "course_id": "c0ffee00-1111-4222-8333-444444444444",
+              "teacher_id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+              "semester": "Fall 2026",
+              "section": "A",
+              "capacity": 60,
+              "course_code": "CS-201",
+              "course_title": "Data Structures"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get teacher by id",
+        "path": "/api/v1/teachers/:id",
+        "method": "GET",
+        "description": "Admin only. 404 if not found.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - teachers.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+            "user_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+            "employee_id": "EMP-1042",
+            "department_id": 1,
+            "email": "sana.khan@unimate.edu",
+            "role": "teacher"
+          }
+        }
+      },
+      {
+        "name": "Update teacher profile",
+        "path": "/api/v1/teachers/:id",
+        "method": "PATCH",
+        "description": "Admin only. At least one field required. If user_id is supplied it must belong to a user whose role is 'teacher'. Note the legacy free-text 'department' field.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - teachers.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "user_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+          "employee_id": "EMP-1099",
+          "department": "Computer Science"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+            "user_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+            "employee_id": "EMP-1099",
+            "department_id": 1
+          }
+        }
+      },
+      {
+        "name": "Delete teacher profile",
+        "path": "/api/v1/teachers/:id",
+        "method": "DELETE",
+        "description": "Admin only. Hard delete of the teachers row.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - teachers.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "message": "Teacher profile deleted successfully"
+          }
+        }
+      },
+      {
+        "name": "Create course",
+        "path": "/api/v1/courses",
+        "method": "POST",
+        "description": "Admin only. 'code' is uppercased and trimmed by Joi before insert.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "code": "CS-201",
+          "title": "Data Structures",
+          "credit_hours": 3,
+          "department_id": 1,
+          "has_practical": false
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "c0ffee00-1111-4222-8333-444444444444",
+            "code": "CS-201",
+            "title": "Data Structures",
+            "credit_hours": 3,
+            "department_id": 1,
+            "has_practical": false,
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List courses",
+        "path": "/api/v1/courses",
+        "method": "GET",
+        "description": "Any authenticated user. Courses joined with department name/code. Not paginated.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "c0ffee00-1111-4222-8333-444444444444",
+              "code": "CS-201",
+              "title": "Data Structures",
+              "credit_hours": 3,
+              "department_id": 1,
+              "has_practical": false,
+              "department_name": "Computer Science",
+              "department_code": "CS"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get course by id",
+        "path": "/api/v1/courses/:id",
+        "method": "GET",
+        "description": "Any authenticated user. 404 if not found.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - courses.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "c0ffee00-1111-4222-8333-444444444444",
+            "code": "CS-201",
+            "title": "Data Structures",
+            "credit_hours": 3,
+            "department_id": 1,
+            "has_practical": false,
+            "department_name": "Computer Science",
+            "department_code": "CS"
+          }
+        }
+      },
+      {
+        "name": "Update course",
+        "path": "/api/v1/courses/:id",
+        "method": "PATCH",
+        "description": "Admin only. At least one field required.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - courses.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "code": "CS-202",
+          "title": "Advanced Data Structures",
+          "credit_hours": 4,
+          "department_id": 1,
+          "has_practical": true
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "c0ffee00-1111-4222-8333-444444444444",
+            "code": "CS-202",
+            "title": "Advanced Data Structures",
+            "credit_hours": 4,
+            "department_id": 1,
+            "has_practical": true
+          }
+        }
+      },
+      {
+        "name": "Delete course",
+        "path": "/api/v1/courses/:id",
+        "method": "DELETE",
+        "description": "Admin only. Hard delete; returns the deleted row.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - courses.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "c0ffee00-1111-4222-8333-444444444444",
+            "code": "CS-201",
+            "title": "Data Structures",
+            "credit_hours": 3,
+            "department_id": 1,
+            "has_practical": false
+          }
+        }
+      },
+      {
+        "name": "Create course offering",
+        "path": "/api/v1/offerings",
+        "method": "POST",
+        "description": "Admin only. Assessment weights are percentages of the final grade and drive academic-rules.calculateRawMarks. Defaults: mid 30, sessional 20, final 50, practical 0. teacher_id may be null (unassigned section).",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "course_id": "c0ffee00-1111-4222-8333-444444444444",
+          "teacher_id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+          "semester": "Fall 2026",
+          "section": "A",
+          "capacity": 60,
+          "mid_weight": 30,
+          "sessional_weight": 20,
+          "final_weight": 50,
+          "practical_weight": 0
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "course_id": "c0ffee00-1111-4222-8333-444444444444",
+            "teacher_id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+            "semester": "Fall 2026",
+            "section": "A",
+            "capacity": 60,
+            "mid_weight": 30,
+            "sessional_weight": 20,
+            "final_weight": 50,
+            "practical_weight": 0,
+            "created_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List course offerings",
+        "path": "/api/v1/offerings",
+        "method": "GET",
+        "description": "Any authenticated user. Optional filters on semester and course_id. Not paginated.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": {
+          "semester": "string (optional, max 50) - exact match on course_offerings.semester",
+          "course_id": "string (uuid, optional) - filter to one course"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "course_id": "c0ffee00-1111-4222-8333-444444444444",
+              "teacher_id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+              "semester": "Fall 2026",
+              "section": "A",
+              "capacity": 60,
+              "course_code": "CS-201",
+              "course_title": "Data Structures",
+              "teacher_profile_id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+              "teacher_email": "sana.khan@unimate.edu"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get offering by id",
+        "path": "/api/v1/offerings/:id",
+        "method": "GET",
+        "description": "Any authenticated user. Includes course code/title, has_practical and the assigned teacher's email.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "course_id": "c0ffee00-1111-4222-8333-444444444444",
+            "teacher_id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+            "semester": "Fall 2026",
+            "section": "A",
+            "capacity": 60,
+            "mid_weight": 30,
+            "sessional_weight": 20,
+            "final_weight": 50,
+            "practical_weight": 0,
+            "course_code": "CS-201",
+            "course_title": "Data Structures",
+            "has_practical": false,
+            "teacher_profile_id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+            "teacher_email": "sana.khan@unimate.edu"
+          }
+        }
+      },
+      {
+        "name": "Update offering",
+        "path": "/api/v1/offerings/:id",
+        "method": "PATCH",
+        "description": "Admin only. At least one field required. teacher_id may be set to null to unassign.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "course_id": "c0ffee00-1111-4222-8333-444444444444",
+          "teacher_id": "a2c4e6f8-1010-4b2a-9c3d-2a4f6e8b0022",
+          "semester": "Spring 2027",
+          "section": "B",
+          "capacity": 45,
+          "mid_weight": 25,
+          "sessional_weight": 25,
+          "final_weight": 40,
+          "practical_weight": 10
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "semester": "Spring 2027",
+            "section": "B",
+            "capacity": 45,
+            "mid_weight": 25,
+            "sessional_weight": 25,
+            "final_weight": 40,
+            "practical_weight": 10
+          }
+        }
+      },
+      {
+        "name": "Delete offering",
+        "path": "/api/v1/offerings/:id",
+        "method": "DELETE",
+        "description": "Admin only. Hard delete; returns the deleted row.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "course_id": "c0ffee00-1111-4222-8333-444444444444",
+            "semester": "Fall 2026",
+            "section": "A"
+          }
+        }
+      },
+      {
+        "name": "Class roster (enrollments by offering)",
+        "path": "/api/v1/enrollments/offering/:offeringId",
+        "method": "GET",
+        "description": "Admin or teacher. Teachers may only read offerings they own (enforced in the service via assertAccessToOffering). This is the roster a teacher uses to resolve the student_ids needed by POST /grades and POST /attendance.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "offeringId": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": {
+          "page": "integer (optional, min 1, default 1)",
+          "limit": "integer (optional, 1-100, default 20)"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "data": [
+              {
+                "id": "e1111111-2222-4333-8444-555555555555",
+                "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+                "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "status": "enrolled",
+                "student_user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+                "roll_number": "FA21-BCS-001",
+                "department_id": 1,
+                "department_name": "Computer Science",
+                "batch": 2021,
+                "student_email": "ali.raza@unimate.edu",
+                "semester": "Fall 2026",
+                "section": "A",
+                "course_id": "c0ffee00-1111-4222-8333-444444444444",
+                "course_code": "CS-201",
+                "course_title": "Data Structures"
+              }
+            ],
+            "meta": {
+              "total": 42,
+              "page": 1,
+              "limit": 20
+            }
+          }
+        }
+      },
+      {
+        "name": "Create enrollment",
+        "path": "/api/v1/enrollments",
+        "method": "POST",
+        "description": "Admin only. Runs in a transaction with a FOR UPDATE lock on the offering. 409 if the student is already enrolled or the offering capacity is full. status defaults to 'enrolled'.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+          "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+          "status": "enrolled"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "e1111111-2222-4333-8444-555555555555",
+            "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "status": "enrolled",
+            "enrolled_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List all enrollments",
+        "path": "/api/v1/enrollments",
+        "method": "GET",
+        "description": "Admin only. Paginated, joined with student, user, department, offering and course details.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": {
+          "page": "integer (optional, min 1, default 1)",
+          "limit": "integer (optional, 1-100, default 20)"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "data": [
+              {
+                "id": "e1111111-2222-4333-8444-555555555555",
+                "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+                "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "status": "enrolled",
+                "roll_number": "FA21-BCS-001",
+                "student_email": "ali.raza@unimate.edu",
+                "semester": "Fall 2026",
+                "section": "A",
+                "course_code": "CS-201",
+                "course_title": "Data Structures"
+              }
+            ],
+            "meta": {
+              "total": 350,
+              "page": 1,
+              "limit": 20
+            }
+          }
+        }
+      },
+      {
+        "name": "List enrollments by student",
+        "path": "/api/v1/enrollments/student/:studentId",
+        "method": "GET",
+        "description": "Admin only. 404 if the student profile does not exist.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "studentId": "string (uuid, required) - students.id"
+        },
+        "query_parameters": {
+          "page": "integer (optional, min 1, default 1)",
+          "limit": "integer (optional, 1-100, default 20)"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "data": [
+              {
+                "id": "e1111111-2222-4333-8444-555555555555",
+                "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+                "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "status": "enrolled",
+                "course_code": "CS-201",
+                "course_title": "Data Structures",
+                "semester": "Fall 2026",
+                "section": "A"
+              }
+            ],
+            "meta": {
+              "total": 6,
+              "page": 1,
+              "limit": 20
+            }
+          }
+        }
+      },
+      {
+        "name": "Get enrollment by id",
+        "path": "/api/v1/enrollments/:id",
+        "method": "GET",
+        "description": "Admin only. 404 if not found.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - enrollments.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "e1111111-2222-4333-8444-555555555555",
+            "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "status": "enrolled",
+            "roll_number": "FA21-BCS-001",
+            "student_email": "ali.raza@unimate.edu",
+            "course_code": "CS-201",
+            "course_title": "Data Structures"
+          }
+        }
+      },
+      {
+        "name": "Update enrollment",
+        "path": "/api/v1/enrollments/:id",
+        "method": "PATCH",
+        "description": "Admin only. At least one field required. Re-checks capacity when the change consumes a new seat, and 409s on duplicate student/offering pairs. status is one of 'enrolled' | 'dropped'.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - enrollments.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+          "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+          "status": "dropped"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "e1111111-2222-4333-8444-555555555555",
+            "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "status": "dropped"
+          }
+        }
+      },
+      {
+        "name": "Delete enrollment",
+        "path": "/api/v1/enrollments/:id",
+        "method": "DELETE",
+        "description": "Admin only. Hard delete; returns the deleted row. 404 if not found.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - enrollments.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "e1111111-2222-4333-8444-555555555555",
+            "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "status": "enrolled"
+          }
+        }
+      },
+      {
+        "name": "Create weekly schedule slot",
+        "path": "/api/v1/schedules",
+        "method": "POST",
+        "description": "Admin or teacher (teachers only for offerings they own). 409 if the new slot overlaps an existing slot for the same offering on the same day. The whole schedule router is also mounted at /api/v1/classes, so every /schedules/* path below is reachable at the identical /classes/* path.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+          "day_of_week": "Monday",
+          "start_time": "09:00",
+          "end_time": "10:30",
+          "room": "Lab-3"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "day_of_week": "Monday",
+            "start_time": "09:00:00",
+            "end_time": "10:30:00",
+            "room": "Lab-3",
+            "created_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List schedule slots for an offering",
+        "path": "/api/v1/schedules/offering/:offeringId",
+        "method": "GET",
+        "description": "Any authenticated user, but the service asserts the caller has access to the offering (teachers must own it; students must be enrolled). Also reachable at /api/v1/classes/offering/:offeringId.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "offeringId": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+              "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "day_of_week": "Monday",
+              "start_time": "09:00:00",
+              "end_time": "10:30:00",
+              "room": "Lab-3"
+            }
+          ]
+        }
+      },
+      {
+        "name": "My teaching timetable",
+        "path": "/api/v1/schedules/me",
+        "method": "GET",
+        "description": "Teacher role only. Weekly timetable grouped by day_of_week, with matching schedule exceptions attached to each slot. Also reachable at /api/v1/classes/me.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "days": {
+              "Monday": [
+                {
+                  "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+                  "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                  "course_id": "c0ffee00-1111-4222-8333-444444444444",
+                  "course_code": "CS-201",
+                  "course_title": "Data Structures",
+                  "section": "A",
+                  "semester": "Fall 2026",
+                  "room": "Lab-3",
+                  "start_time": "09:00:00",
+                  "end_time": "10:30:00",
+                  "capacity": 60,
+                  "enrolled_count": 42,
+                  "exceptions": []
+                }
+              ]
+            },
+            "exceptions": [
+              {
+                "exception_id": "9b2c4d6e-8888-4999-aaaa-bbbbbbbbbbbb",
+                "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+                "date": "2026-08-03T00:00:00.000Z",
+                "exception_type": "cancelled",
+                "new_start_time": null,
+                "new_end_time": null,
+                "new_room": null,
+                "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "section": "A",
+                "course_code": "CS-201",
+                "course_title": "Data Structures"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "My student timetable",
+        "path": "/api/v1/schedules",
+        "method": "GET",
+        "description": "Student role only. Without ?date returns the weekly timetable grouped by day. With ?date=YYYY-MM-DD returns a flat, exception-resolved list of that day's classes (cancellations, reschedules and extra classes applied). 'date' must match YYYY-MM-DD (validated as a string, since the service splits it on '-'); a malformed value is rejected with 400 rather than silently returning an empty list. Also reachable at /api/v1/classes.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": {
+          "date": "string (optional, YYYY-MM-DD) - resolve a single day's classes instead of the weekly grid"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+              "courseName": "Data Structures",
+              "courseCode": "CS-201",
+              "room": "Lab-3",
+              "startTime": "2026-08-03T09:00:00Z",
+              "endTime": "2026-08-03T10:30:00Z",
+              "status": "upcoming",
+              "aiPrepSuggested": false,
+              "date": "2026-08-03",
+              "isCancelled": false,
+              "isRescheduled": false,
+              "rescheduledRoom": ""
+            }
+          ]
+        }
+      },
+      {
+        "name": "Create schedule exception",
+        "path": "/api/v1/schedules/exceptions",
+        "method": "POST",
+        "description": "Admin or teacher (owned offerings only). exception_type is one of 'cancelled' | 'rescheduled' | 'extra'. schedule_id is omitted for extra classes; when supplied it must belong to the same offering. Also reachable at /api/v1/classes/exceptions.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+          "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+          "date": "2026-08-03",
+          "exception_type": "rescheduled",
+          "new_start_time": "11:00",
+          "new_end_time": "12:30",
+          "new_room": "Room-201"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "9b2c4d6e-8888-4999-aaaa-bbbbbbbbbbbb",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+            "date": "2026-08-03T00:00:00.000Z",
+            "exception_type": "rescheduled",
+            "new_start_time": "11:00:00",
+            "new_end_time": "12:30:00",
+            "new_room": "Room-201"
+          }
+        }
+      },
+      {
+        "name": "List schedule exceptions for an offering",
+        "path": "/api/v1/schedules/offering/:offeringId/exceptions",
+        "method": "GET",
+        "description": "Any authenticated user with access to the offering. Ordered by date descending. Also reachable at /api/v1/classes/offering/:offeringId/exceptions.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "offeringId": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "9b2c4d6e-8888-4999-aaaa-bbbbbbbbbbbb",
+              "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+              "date": "2026-08-03T00:00:00.000Z",
+              "exception_type": "cancelled",
+              "new_start_time": null,
+              "new_end_time": null,
+              "new_room": null
+            }
+          ]
+        }
+      },
+      {
+        "name": "Delete schedule exception",
+        "path": "/api/v1/schedules/exceptions/:id",
+        "method": "DELETE",
+        "description": "Admin or teacher (owned offerings only). 404 if the exception does not exist. Declared before DELETE /:id so it wins the route match. Also reachable at /api/v1/classes/exceptions/:id.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - schedule_exceptions.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "9b2c4d6e-8888-4999-aaaa-bbbbbbbbbbbb",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+            "date": "2026-08-03T00:00:00.000Z",
+            "exception_type": "cancelled"
+          }
+        }
+      },
+      {
+        "name": "Delete schedule slot",
+        "path": "/api/v1/schedules/:id",
+        "method": "DELETE",
+        "description": "Admin or teacher (owned offerings only). 404 if the schedule does not exist. Also reachable at /api/v1/classes/:id.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - schedules.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "day_of_week": "Monday",
+            "start_time": "09:00:00",
+            "end_time": "10:30:00",
+            "room": "Lab-3"
+          }
+        }
+      },
+      {
+        "name": "My attendance summary",
+        "path": "/api/v1/attendance/my/summary",
+        "method": "GET",
+        "description": "Student role only. Per-course attendance for every active enrollment plus an overall average. Percentages are computed against (total_lectures - leaves); eligibility threshold is 75%.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "averageAttendance": 88.75,
+            "courses": [
+              {
+                "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "course_code": "CS-201",
+                "course_title": "Data Structures",
+                "total_lectures": 24,
+                "present": 21,
+                "absent": 2,
+                "late": 1,
+                "leave": 0,
+                "attendance_percentage": 87.5,
+                "eligible": true
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "My attendance summary (mobile alias)",
+        "path": "/api/v1/attendance/my",
+        "method": "GET",
+        "description": "Alias of GET /attendance/my/summary; the mobile client is configured to call this path. Same controller.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "averageAttendance": 88.75,
+            "courses": [
+              {
+                "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "course_code": "CS-201",
+                "course_title": "Data Structures",
+                "total_lectures": 24,
+                "present": 21,
+                "absent": 2,
+                "late": 1,
+                "leave": 0,
+                "attendance_percentage": 87.5,
+                "eligible": true
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "Record attendance (exception-based marking)",
+        "path": "/api/v1/attendance",
+        "method": "POST",
+        "description": "Admin or teacher (owned offerings only). Body must supply EXACTLY ONE of offering_id or session_id (Joi .xor), and offering_id additionally REQUIRES date (Joi .with). Every actively-enrolled student is defaulted to 'present'; 'records' only needs the exceptions (absent/late/leave). Passing a student_id that is not actively enrolled returns 400. status values: present | absent | late | leave.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+          "date": "2026-08-03",
+          "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+          "exception_id": null,
+          "records": [
+            {
+              "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+              "status": "absent"
+            }
+          ]
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "session": {
+              "id": "aa11bb22-cc33-4dd4-8ee5-ff6600112233",
+              "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "date": "2026-08-03T00:00:00.000Z",
+              "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+              "exception_id": null
+            },
+            "records": [
+              {
+                "id": "dd44ee55-ff66-4771-8882-993300112233",
+                "session_id": "aa11bb22-cc33-4dd4-8ee5-ff6600112233",
+                "enrollment_id": "e1111111-2222-4333-8444-555555555555",
+                "status": "absent"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "Create / upsert attendance session",
+        "path": "/api/v1/attendance/sessions",
+        "method": "POST",
+        "description": "Admin or teacher (owned offerings only). Upserts on (offering_id, date) — calling it twice for the same date returns the existing session with schedule_id/exception_id merged.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+          "date": "2026-08-03",
+          "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+          "exception_id": null
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "aa11bb22-cc33-4dd4-8ee5-ff6600112233",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "date": "2026-08-03T00:00:00.000Z",
+            "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+            "exception_id": null,
+            "created_at": "2026-08-03T04:05:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List attendance sessions for an offering",
+        "path": "/api/v1/attendance/offering/:offeringId/sessions",
+        "method": "GET",
+        "description": "Admin, teacher or student, subject to offering access. Ordered by date descending.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "offeringId": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "aa11bb22-cc33-4dd4-8ee5-ff6600112233",
+              "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "date": "2026-08-03T00:00:00.000Z",
+              "schedule_id": "5d9f1c2b-7777-4888-9999-aaaaaaaaaaaa",
+              "exception_id": null
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get records for one attendance session",
+        "path": "/api/v1/attendance/session/:sessionId",
+        "method": "GET",
+        "description": "Admin, teacher or student, subject to access on the session's offering. Returns every record with the student's roll number and email. 404 if the session does not exist.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "sessionId": "string (uuid, required) - attendance_sessions.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "dd44ee55-ff66-4771-8882-993300112233",
+              "session_id": "aa11bb22-cc33-4dd4-8ee5-ff6600112233",
+              "enrollment_id": "e1111111-2222-4333-8444-555555555555",
+              "status": "present",
+              "roll_number": "FA21-BCS-001",
+              "email": "ali.raza@unimate.edu"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Attendance statistics for an offering",
+        "path": "/api/v1/attendance/offering/:offeringId",
+        "method": "GET",
+        "description": "Admin, teacher or student. Per-student aggregates with UOS eligibility (75% of lectures adjusted for approved leaves). When the caller is a student the result set is filtered down to that student's own row only.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "offeringId": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": {
+          "page": "integer (optional, min 1) - repository default 1",
+          "limit": "integer (optional, 1-100) - repository default 50"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "data": [
+              {
+                "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+                "roll_number": "FA21-BCS-001",
+                "total_lectures": 24,
+                "leaves": 0,
+                "adjusted_total": 24,
+                "present": 21,
+                "absent": 2,
+                "late": 1,
+                "attendance_percentage": 87.5,
+                "eligible_for_exam": true
+              }
+            ],
+            "meta": {
+              "total": 1,
+              "page": 1,
+              "limit": 50
+            }
+          }
+        }
+      },
+      {
+        "name": "My attendance history for one course",
+        "path": "/api/v1/attendance/my/history/:offeringId",
+        "method": "GET",
+        "description": "Student role only. Session-by-session history for the authenticated student in the given offering. Sessions with no explicit record default to 'present'.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "offeringId": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "session_id": "aa11bb22-cc33-4dd4-8ee5-ff6600112233",
+              "date": "2026-08-03T00:00:00.000Z",
+              "status": "present"
+            }
+          ]
+        }
+      },
+      {
+        "name": "My assignments",
+        "path": "/api/v1/assignments/my",
+        "method": "GET",
+        "description": "Student role only. Every assignment across the student's active enrollments, with submission progress and grade merged in. A 'pending' item whose due date has passed is reported as 'overdue'.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": {
+          "status": "string (optional) - one of 'pending' | 'done' | 'overdue'; filters the result list"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+              "title": "Linked List Lab",
+              "subject": "Data Structures (CS-201)",
+              "due": "2026-08-10T23:59:00.000Z",
+              "progress": 40,
+              "difficulty": "medium",
+              "priority": "high",
+              "status": "pending",
+              "isGraded": false,
+              "marks": null,
+              "maxMarks": 20,
+              "fileUrl": null,
+              "textContent": null,
+              "submittedAt": null
+            }
+          ]
+        }
+      },
+      {
+        "name": "My submissions",
+        "path": "/api/v1/assignments/my/submissions",
+        "method": "GET",
+        "description": "Student role only. Same shape as GET /assignments/my, filtered to items with a non-null submittedAt.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+              "title": "Linked List Lab",
+              "subject": "Data Structures (CS-201)",
+              "due": "2026-08-10T23:59:00.000Z",
+              "progress": 100,
+              "difficulty": "medium",
+              "priority": "high",
+              "status": "done",
+              "isGraded": true,
+              "marks": 18,
+              "maxMarks": 20,
+              "fileUrl": "https://storage.unimate.edu/submissions/abc.pdf",
+              "textContent": null,
+              "submittedAt": "2026-08-09T18:20:00.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Submit assignment",
+        "path": "/api/v1/assignments/:id/submit",
+        "method": "POST",
+        "description": "Student role only. Requires at least one of fileUrl or textContent (Joi .or). 403 if the student is not actively enrolled in the assignment's offering; 400 if the due date has passed. Upserts student_assignments with progress=100 and status='done'.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - assignments.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "fileUrl": "https://storage.unimate.edu/submissions/abc.pdf",
+          "textContent": "Answers included in the attached PDF."
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "77889900-aabb-4ccd-8eef-112233445566",
+            "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "assignment_id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+            "progress": 100,
+            "status": "done",
+            "file_url": "https://storage.unimate.edu/submissions/abc.pdf",
+            "text_content": "Answers included in the attached PDF.",
+            "submitted_at": "2026-08-09T18:20:00.000Z",
+            "updated_at": "2026-08-09T18:20:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Update my assignment progress",
+        "path": "/api/v1/assignments/:id/progress",
+        "method": "POST",
+        "description": "Student role only. Self-reported completion tracker; does not submit anything. 404 if the assignment does not exist.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - assignments.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "progress": 60,
+          "status": "pending"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "77889900-aabb-4ccd-8eef-112233445566",
+            "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "assignment_id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+            "progress": 60,
+            "status": "pending",
+            "updated_at": "2026-08-05T10:00:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Create assignment",
+        "path": "/api/v1/assignments",
+        "method": "POST",
+        "description": "Admin or teacher (owned offerings only). 400 if due_date is in the past; 409 if an assignment with the same title + description already exists for the offering. assessment_type defaults to 'assignment'.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+          "title": "Linked List Lab",
+          "description": "Implement a doubly linked list with insert, delete and reverse.",
+          "assessment_type": "assignment",
+          "due_date": "2026-08-10T23:59:00.000Z",
+          "total_points": 20
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "title": "Linked List Lab",
+            "description": "Implement a doubly linked list with insert, delete and reverse.",
+            "assessment_type": "assignment",
+            "due_date": "2026-08-10T23:59:00.000Z",
+            "total_points": 20,
+            "is_done": false,
+            "created_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List assignments",
+        "path": "/api/v1/assignments",
+        "method": "GET",
+        "description": "Admin or teacher. Teachers are transparently scoped to their own offerings, and 403 if they pass an offering_id they do not own.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": {
+          "offering_id": "string (uuid, optional) - restrict to one offering",
+          "is_done": "boolean (optional) - filter on the assignment completion flag",
+          "page": "integer (optional, min 1, default 1)",
+          "limit": "integer (optional, 1-100, default 20)"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "data": [
+              {
+                "id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+                "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "title": "Linked List Lab",
+                "description": "Implement a doubly linked list.",
+                "assessment_type": "assignment",
+                "due_date": "2026-08-10T23:59:00.000Z",
+                "total_points": 20,
+                "is_done": false,
+                "course_code": "CS-201",
+                "course_title": "Data Structures",
+                "semester": "Fall 2026",
+                "section": "A"
+              }
+            ],
+            "meta": {
+              "total": 12,
+              "page": 1,
+              "limit": 20
+            }
+          }
+        }
+      },
+      {
+        "name": "List assignments for an offering",
+        "path": "/api/v1/assignments/offering/:offeringId",
+        "method": "GET",
+        "description": "Any authenticated user with access to the offering. Ordered by due_date ascending.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "offeringId": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+              "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+              "title": "Linked List Lab",
+              "description": "Implement a doubly linked list.",
+              "assessment_type": "assignment",
+              "due_date": "2026-08-10T23:59:00.000Z",
+              "total_points": 20,
+              "is_done": false
+            }
+          ]
+        }
+      },
+      {
+        "name": "Update assignment",
+        "path": "/api/v1/assignments/:id",
+        "method": "PATCH",
+        "description": "Admin or teacher (owned offerings only). All fields optional. 409 if the resulting title + description collides with another assignment in the same offering.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - assignments.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "title": "Linked List Lab (revised)",
+          "description": "Implement a doubly linked list with insert, delete, reverse and sort.",
+          "assessment_type": "assignment",
+          "due_date": "2026-08-14T23:59:00.000Z",
+          "total_points": 25
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "title": "Linked List Lab (revised)",
+            "description": "Implement a doubly linked list with insert, delete, reverse and sort.",
+            "assessment_type": "assignment",
+            "due_date": "2026-08-14T23:59:00.000Z",
+            "total_points": 25,
+            "is_done": false
+          }
+        }
+      },
+      {
+        "name": "Mark assignment as done",
+        "path": "/api/v1/assignments/:id/done",
+        "method": "PATCH",
+        "description": "Admin or teacher (owned offerings only). Sets assignments.is_done = true. No request body.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - assignments.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "title": "Linked List Lab",
+            "is_done": true
+          }
+        }
+      },
+      {
+        "name": "Delete assignment",
+        "path": "/api/v1/assignments/:id",
+        "method": "DELETE",
+        "description": "Admin or teacher (owned offerings only). Hard delete; returns the deleted row.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - assignments.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "title": "Linked List Lab",
+            "total_points": 20
+          }
+        }
+      },
+      {
+        "name": "Assignment details",
+        "path": "/api/v1/assignments/:id",
+        "method": "GET",
+        "description": "Any authenticated user. Students get a submission-aware view (progress, submission, grade, submissionAllowed based on the due date); admins and teachers get the plain assignment view with submissionAllowed always true. Declared last so /my, /my/submissions and /offering/:offeringId are matched first.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - assignments.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "f1e2d3c4-b5a6-4978-8899-001122334455",
+            "title": "Linked List Lab",
+            "instructions": "Implement a doubly linked list with insert, delete and reverse.",
+            "due": "2026-08-10T23:59:00.000Z",
+            "maxMarks": 20,
+            "difficulty": "medium",
+            "priority": "high",
+            "status": "pending",
+            "progress": 40,
+            "fileUrl": null,
+            "textContent": null,
+            "submittedAt": null,
+            "isGraded": false,
+            "marks": null,
+            "teacherRemarks": "",
+            "attachments": [],
+            "submissionAllowed": true
+          }
+        }
+      },
+      {
+        "name": "My grades summary",
+        "path": "/api/v1/grades/my/summary",
+        "method": "GET",
+        "description": "Student role only. CGPA, latest SGPA, per-semester breakdown and per-course grades, computed live from the transcript via academic-rules.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "cgpa": 3.42,
+            "sgpa": 3.55,
+            "totalCredits": 18,
+            "gpaGoal": 3.7,
+            "studyIntensity": "balanced",
+            "semesters": [
+              {
+                "semester": "Fall 2026",
+                "creditHours": 18,
+                "sgpa": 3.55
+              }
+            ],
+            "courses": [
+              {
+                "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "course_code": "CS-201",
+                "course_title": "Data Structures",
+                "credit_hours": 3,
+                "marks": 82,
+                "grade": "A-",
+                "gpa": 3.7
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "My grades summary (mobile alias)",
+        "path": "/api/v1/grades/my",
+        "method": "GET",
+        "description": "Alias of GET /grades/my/summary; the mobile client is configured to call this path. Same controller.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "cgpa": 3.42,
+            "sgpa": 3.55,
+            "totalCredits": 18,
+            "gpaGoal": 3.7,
+            "studyIntensity": "balanced",
+            "semesters": [
+              {
+                "semester": "Fall 2026",
+                "creditHours": 18,
+                "sgpa": 3.55
+              }
+            ],
+            "courses": []
+          }
+        }
+      },
+      {
+        "name": "My grade details for one course",
+        "path": "/api/v1/grades/my/course/:courseId",
+        "method": "GET",
+        "description": "Student role only. Resolves the student's active offering for the given course, then returns the offering weights, every graded component and the full weighted calculation. 404 if the course is not in the student's active enrollments.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "courseId": "string (uuid, required) - courses.id (NOT the offering id)"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+            "course_id": "c0ffee00-1111-4222-8333-444444444444",
+            "course_code": "CS-201",
+            "course_title": "Data Structures",
+            "semester": "Fall 2026",
+            "section": "A",
+            "credit_hours": 3,
+            "weights": {
+              "mid_term": 30,
+              "sessional": 20,
+              "final_exam": 50,
+              "practical": 0
+            },
+            "components": [
+              {
+                "id": "g1111111-2222-4333-8444-555555555555",
+                "assessmentType": "midterm",
+                "title": "Mid Term Exam",
+                "score": 24,
+                "maxScore": 30,
+                "percentage": 80
+              }
+            ],
+            "calculation": {
+              "raw_marks": 81.4,
+              "final_marks": 82,
+              "letter_grade": "A-",
+              "grade_point": 3.7,
+              "has_practical": false,
+              "components": {
+                "mid_term": 80,
+                "sessional": 85,
+                "final_exam": 80,
+                "practical": 0
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "My grades grouped by semester",
+        "path": "/api/v1/grades/all-semesters",
+        "method": "GET",
+        "description": "Student role only. Returns an object keyed by semester, each value an array of that semester's courses.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "Fall 2026": [
+              {
+                "course": "Data Structures",
+                "code": "CS-201",
+                "credit_hours": 3,
+                "marks": 82,
+                "grade": "A-",
+                "gpa": 3.7
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "Update my GPA goal",
+        "path": "/api/v1/grades/gpa-goals",
+        "method": "POST",
+        "description": "Student role only. Writes target_cgpa and study_intensity onto the students row (COALESCE — omitted fields keep their current value). At least one field is required; targetCgpa must be 0-4. study_intensity is a free-text column with no DB enum, so it is only length-bounded (max 30 chars).",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "targetCgpa": 3.7,
+          "studyIntensity": "high"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+            "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "roll_number": "FA21-BCS-001",
+            "target_cgpa": "3.70",
+            "study_intensity": "high",
+            "updated_at": "2026-07-28T12:00:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Submit / upsert a grade",
+        "path": "/api/v1/grades",
+        "method": "POST",
+        "description": "Admin or teacher (owned offerings only). 400 if the student is not actively enrolled or score > max_score. For assessment_type in (assignment, quiz, presentation, project) a reference_id pointing at an assignment in the same offering is REQUIRED, and title/max_score are overwritten from that assignment; for the other types (sessional, midterm, final, practical) title and max_score are required in the body. Upserts on (enrollment_id, reference_id) or (enrollment_id, assessment_type).",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+          "student_id": "b1e5c8d2-1111-4b2a-9c3d-2a4f6e8b0011",
+          "assessment_type": "midterm",
+          "reference_id": null,
+          "title": "Mid Term Exam",
+          "score": 24,
+          "max_score": 30
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "g1111111-2222-4333-8444-555555555555",
+            "enrollment_id": "e1111111-2222-4333-8444-555555555555",
+            "assessment_type": "midterm",
+            "reference_id": null,
+            "title": "Mid Term Exam",
+            "score": "24.00",
+            "max_score": "30.00",
+            "created_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List grades for an offering",
+        "path": "/api/v1/grades/offering/:offeringId",
+        "method": "GET",
+        "description": "Admin or teacher (owned offerings only). Paginated, ordered by roll number then assessment type.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "offeringId": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": {
+          "page": "integer (optional, min 1) - repository default 1",
+          "limit": "integer (optional, 1-100) - repository default 50"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "data": [
+              {
+                "id": "g1111111-2222-4333-8444-555555555555",
+                "enrollment_id": "e1111111-2222-4333-8444-555555555555",
+                "assessment_type": "midterm",
+                "title": "Mid Term Exam",
+                "score": "24.00",
+                "max_score": "30.00",
+                "roll_number": "FA21-BCS-001",
+                "email": "ali.raza@unimate.edu"
+              }
+            ],
+            "meta": {
+              "total": 126,
+              "page": 1,
+              "limit": 50
+            }
+          }
+        }
+      },
+      {
+        "name": "Calculate weighted course grade",
+        "path": "/api/v1/grades/student/:studentId/offering/:offeringId/calculation",
+        "method": "GET",
+        "description": "Admin, teacher (owned offerings only) or student. A student may only request their own studentId — anything else is 403. Applies the offering's mid/sessional/final/practical weights, then rounds up (Math.ceil) to the final marks and maps to a letter grade and grade point.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "studentId": "string (uuid, required) - students.id",
+          "offeringId": "string (uuid, required) - course_offerings.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "raw_marks": 81.4,
+            "final_marks": 82,
+            "letter_grade": "A-",
+            "grade_point": 3.7,
+            "has_practical": false,
+            "components": {
+              "mid_term": 80,
+              "sessional": 85,
+              "final_exam": 80,
+              "practical": 0
+            }
+          }
+        }
+      },
+      {
+        "name": "Student transcript",
+        "path": "/api/v1/grades/student/:studentId/transcript",
+        "method": "GET",
+        "description": "Admin or student. Students may only fetch their own transcript (403 otherwise); teachers are explicitly rejected with 403 even though the route-level role gate lists them implicitly via admin/student only.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "studentId": "string (uuid, required) - students.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "cgpa": 3.42,
+            "total_credit_hours": 18,
+            "courses": [
+              {
+                "offering_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "semester": "Fall 2026",
+                "course_code": "CS-201",
+                "course": "Data Structures",
+                "credit_hours": 3,
+                "final_marks": 82,
+                "letter_grade": "A-",
+                "grade_point": 3.7,
+                "quality_points": 11.1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "Create announcement",
+        "path": "/api/v1/announcements",
+        "method": "POST",
+        "description": "Admin or teacher. Exactly one of offering_ids, department_id or semester must be supplied (Joi .xor). Teachers MUST target offering_ids they own (403 otherwise); admins may only target their own department_id. Title and content are HTML-sanitised. Recipients are resolved and FCM push + in-app notifications are dispatched asynchronously after commit.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "title": "Midterm schedule published",
+          "content": "The midterm datesheet for Fall 2026 is now available on the portal.",
+          "offering_ids": [
+            "0f8fad5b-d9cb-469f-a165-70867728950e"
+          ],
+          "department_id": null,
+          "semester": null
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "an111111-2222-4333-8444-555555555555",
+            "author_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+            "title": "Midterm schedule published",
+            "content": "The midterm datesheet for Fall 2026 is now available on the portal.",
+            "department_id": null,
+            "semester": null,
+            "created_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List announcements",
+        "path": "/api/v1/announcements",
+        "method": "GET",
+        "description": "Any authenticated user. Explicit filters (offering_id / department_id / semester) take priority in that order; with no filter the feed is role-scoped — students see department + enrolled-offering + semester matches, teachers see their department, admins see the most recent institution-wide. Each row is annotated with is_read for the caller.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": {
+          "offering_id": "string (uuid, optional) - announcements targeted at this offering",
+          "department_id": "integer (optional) - announcements targeted at this department",
+          "semester": "string (optional) - announcements targeted at this semester",
+          "page": "integer (optional, min 1, default 1)",
+          "limit": "integer (optional, 1-100, default 20)"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "data": [
+              {
+                "id": "an111111-2222-4333-8444-555555555555",
+                "author_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+                "title": "Midterm schedule published",
+                "content": "The midterm datesheet for Fall 2026 is now available.",
+                "department_id": 1,
+                "semester": null,
+                "created_at": "2026-07-28T09:12:00.000Z",
+                "is_read": false
+              }
+            ],
+            "meta": {
+              "total": 8,
+              "page": 1,
+              "limit": 20
+            }
+          }
+        }
+      },
+      {
+        "name": "Get announcement by id",
+        "path": "/api/v1/announcements/:id",
+        "method": "GET",
+        "description": "Any authenticated user. 404 if not found. Annotated with is_read for the caller.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - announcements.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "an111111-2222-4333-8444-555555555555",
+            "author_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+            "title": "Midterm schedule published",
+            "content": "The midterm datesheet for Fall 2026 is now available.",
+            "department_id": 1,
+            "semester": null,
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "is_read": true
+          }
+        }
+      },
+      {
+        "name": "Mark announcement as read",
+        "path": "/api/v1/announcements/:id/read",
+        "method": "PATCH",
+        "description": "Any authenticated user. Idempotent — inserts into announcement_reads with ON CONFLICT DO NOTHING. No request body.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - announcements.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "message": "Announcement marked as read"
+          }
+        }
+      },
+      {
+        "name": "Update announcement",
+        "path": "/api/v1/announcements/:id",
+        "method": "PATCH",
+        "description": "Admin or teacher, and only the original author (403 otherwise). At least one of title/content required; both are HTML-sanitised. Re-dispatches notifications with an 'Updated: ' title prefix.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - announcements.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "title": "Midterm schedule published (revised)",
+          "content": "The revised midterm datesheet for Fall 2026 is now available."
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "an111111-2222-4333-8444-555555555555",
+            "title": "Midterm schedule published (revised)",
+            "content": "The revised midterm datesheet for Fall 2026 is now available.",
+            "department_id": 1,
+            "semester": null
+          }
+        }
+      },
+      {
+        "name": "Delete announcement",
+        "path": "/api/v1/announcements/:id",
+        "method": "DELETE",
+        "description": "Admin or teacher. The author may always delete; any admin may delete regardless of authorship. Hard delete.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - announcements.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "an111111-2222-4333-8444-555555555555",
+            "title": "Midterm schedule published",
+            "content": "The midterm datesheet for Fall 2026 is now available."
+          }
+        }
+      },
+      {
+        "name": "Register FCM device token",
+        "path": "/api/v1/notifications/token",
+        "method": "POST",
+        "description": "Any authenticated user. Upserts on the token — re-registering an existing token reassigns it to the current user.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "token": "fS3kJ2mQ...:APA91bH_device_registration_token"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "tk111111-2222-4333-8444-555555555555",
+            "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "token": "fS3kJ2mQ...:APA91bH_device_registration_token",
+            "created_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List my notifications",
+        "path": "/api/v1/notifications",
+        "method": "GET",
+        "description": "Any authenticated user. Returns a plain array (no meta wrapper), newest first. Each row is duplicated into camelCase aliases (isRead, createdAt, body) for mobile client compatibility.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": {
+          "page": "integer (optional, min 1, default 1)",
+          "limit": "integer (optional, 1-100, default 20)"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "nt111111-2222-4333-8444-555555555555",
+              "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "type": "announcement",
+              "title": "New Announcement: Midterm schedule published",
+              "message": "The midterm datesheet for Fall 2026 is now available.",
+              "reference_id": "an111111-2222-4333-8444-555555555555",
+              "is_read": false,
+              "created_at": "2026-07-28T09:12:00.000Z",
+              "isRead": false,
+              "createdAt": "2026-07-28T09:12:00.000Z",
+              "body": "The midterm datesheet for Fall 2026 is now available."
+            }
+          ]
+        }
+      },
+      {
+        "name": "Mark notification as read",
+        "path": "/api/v1/notifications/:id/read",
+        "method": "PATCH",
+        "description": "Any authenticated user. Scoped to the caller's own notifications — 404 'Notification not found or access denied' otherwise. No request body.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - notifications.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "nt111111-2222-4333-8444-555555555555",
+            "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "type": "announcement",
+            "title": "New Announcement: Midterm schedule published",
+            "message": "The midterm datesheet for Fall 2026 is now available.",
+            "is_read": true,
+            "isRead": true,
+            "createdAt": "2026-07-28T09:12:00.000Z",
+            "body": "The midterm datesheet for Fall 2026 is now available."
+          }
+        }
+      },
+      {
+        "name": "Mark all notifications as read",
+        "path": "/api/v1/notifications/read-all",
+        "method": "PATCH",
+        "description": "Any authenticated user. Marks every notification for the caller as read and returns the updated rows. No request body and no validation schema.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "nt111111-2222-4333-8444-555555555555",
+              "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "type": "announcement",
+              "title": "New Announcement: Midterm schedule published",
+              "is_read": true,
+              "isRead": true,
+              "createdAt": "2026-07-28T09:12:00.000Z",
+              "body": "The midterm datesheet for Fall 2026 is now available."
+            }
+          ]
+        }
+      },
+      {
+        "name": "My admin profile",
+        "path": "/api/v1/admins/me",
+        "method": "GET",
+        "description": "Admin or super_admin. Admin profile for the authenticated user, joined with user and department. 404 if no admin profile exists.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "ad111111-2222-4333-8444-555555555555",
+            "user_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "admin_id": "A101",
+            "department_id": 1,
+            "email": "admin@unimate.edu",
+            "role": "admin",
+            "is_active": true,
+            "department_name": "Computer Science",
+            "department_code": "CS"
+          }
+        }
+      },
+      {
+        "name": "List admins",
+        "path": "/api/v1/admins",
+        "method": "GET",
+        "description": "Admin or super_admin. All admin profiles, newest first. Not paginated.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "ad111111-2222-4333-8444-555555555555",
+              "user_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+              "admin_id": "A101",
+              "department_id": 1,
+              "email": "admin@unimate.edu",
+              "role": "admin",
+              "is_active": true,
+              "department_name": "Computer Science",
+              "department_code": "CS"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get admin by id",
+        "path": "/api/v1/admins/:id",
+        "method": "GET",
+        "description": "Admin or super_admin. 404 if the admin profile does not exist.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - admins.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "ad111111-2222-4333-8444-555555555555",
+            "user_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "admin_id": "A101",
+            "department_id": 1,
+            "email": "admin@unimate.edu",
+            "role": "admin",
+            "is_active": true,
+            "department_name": "Computer Science",
+            "department_code": "CS"
+          }
+        }
+      },
+      {
+        "name": "Update admin profile",
+        "path": "/api/v1/admins/:id",
+        "method": "PATCH",
+        "description": "Admin or super_admin. Both fields optional (the schema has no .min(1)). Note the legacy free-text 'department' field rather than department_id.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - admins.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "admin_id": "A102",
+          "department": "Computer Science"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "ad111111-2222-4333-8444-555555555555",
+            "user_id": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+            "admin_id": "A102",
+            "department_id": 1
+          }
+        }
+      },
+      {
+        "name": "Delete admin profile",
+        "path": "/api/v1/admins/:id",
+        "method": "DELETE",
+        "description": "Admin (and therefore super_admin) only. Hard delete of the admins row. Responds with data: null.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - admins.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": null
+        }
+      },
+      {
+        "name": "Create community post",
+        "path": "/api/v1/community/posts",
+        "method": "POST",
+        "description": "Student, teacher or admin. The post is automatically scoped to the author's department; 403 if the caller has no resolvable department. Title and content are HTML-sanitised.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "title": "Study group for Data Structures midterm",
+          "content": "Anyone interested in a Saturday revision session in the library?"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "cp111111-2222-4333-8444-555555555555",
+            "author_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "department_id": 1,
+            "title": "Study group for Data Structures midterm",
+            "content": "Anyone interested in a Saturday revision session in the library?",
+            "status": "active",
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "List community posts",
+        "path": "/api/v1/community/posts",
+        "method": "GET",
+        "description": "Student, teacher or admin. Returns the caller's own department feed with like and comment counts, newest first. Note: the response is a bare array with no meta envelope, so the total post count is not exposed.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": {
+          "page": "integer (optional, min 1, default 1)",
+          "limit": "integer (optional, 1-100, default 20)"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "cp111111-2222-4333-8444-555555555555",
+              "author_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+              "department_id": 1,
+              "title": "Study group for Data Structures midterm",
+              "content": "Anyone interested in a Saturday revision session?",
+              "status": "active",
+              "created_at": "2026-07-28T09:12:00.000Z",
+              "author_email": "ali.raza@unimate.edu",
+              "author_role": "student",
+              "like_count": "4",
+              "comment_count": "2"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get community post with comments",
+        "path": "/api/v1/community/posts/:id",
+        "method": "GET",
+        "description": "Student, teacher or admin. 403 if the post belongs to another department (admins exempt), 404 if it does not exist or is soft-deleted. Comments are returned paginated inside the post object.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - community_posts.id"
+        },
+        "query_parameters": {
+          "page": "integer (optional, min 1, default 1) - comment page",
+          "limit": "integer (optional, 1-100, default 50) - comment page size"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "cp111111-2222-4333-8444-555555555555",
+            "author_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "department_id": 1,
+            "title": "Study group for Data Structures midterm",
+            "content": "Anyone interested in a Saturday revision session?",
+            "status": "active",
+            "author_email": "ali.raza@unimate.edu",
+            "author_role": "student",
+            "like_count": "4",
+            "comments": {
+              "data": [
+                {
+                  "id": "cc111111-2222-4333-8444-555555555555",
+                  "post_id": "cp111111-2222-4333-8444-555555555555",
+                  "author_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
+                  "content": "Count me in.",
+                  "status": "active",
+                  "created_at": "2026-07-28T10:00:00.000Z",
+                  "author_email": "sana.khan@unimate.edu",
+                  "author_role": "teacher"
+                }
+              ],
+              "meta": {
+                "total": 2,
+                "page": 1,
+                "limit": 50
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Update community post",
+        "path": "/api/v1/community/posts/:id",
+        "method": "PATCH",
+        "description": "Student, teacher or admin. Authors may change title/content only. Admins moderating within their own department may set status to active | hidden | deleted; an admin passing 'status' takes the moderation branch and any title/content in the same request is ignored. 403 for non-author, non-admin callers. At least one field required.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - community_posts.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "title": "Study group — now Sunday",
+          "content": "Moved to Sunday 10am, same room.",
+          "status": "hidden"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "cp111111-2222-4333-8444-555555555555",
+            "title": "Study group — now Sunday",
+            "content": "Moved to Sunday 10am, same room.",
+            "status": "active",
+            "updated_at": "2026-07-28T12:00:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Delete community post",
+        "path": "/api/v1/community/posts/:id",
+        "method": "DELETE",
+        "description": "Student, teacher or admin. Soft delete — sets status='deleted'. Authors may delete their own posts; admins may delete any post within their own department (403 outside it).",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - community_posts.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "cp111111-2222-4333-8444-555555555555",
+            "title": "Study group for Data Structures midterm",
+            "status": "deleted",
+            "updated_at": "2026-07-28T12:30:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Create comment on post",
+        "path": "/api/v1/community/posts/:id/comments",
+        "method": "POST",
+        "description": "Student, teacher or admin. 403 if the post is outside the caller's department. Students are hard-limited to 3 comments per post (enforced under a SELECT ... FOR UPDATE lock on their profile to prevent races); exceeding it returns 403. Content is HTML-sanitised.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - community_posts.id (the post being commented on)"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "content": "Count me in — I'll bring the past papers."
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "cc111111-2222-4333-8444-555555555555",
+            "post_id": "cp111111-2222-4333-8444-555555555555",
+            "author_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+            "content": "Count me in — I'll bring the past papers.",
+            "status": "active",
+            "created_at": "2026-07-28T10:00:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Update comment",
+        "path": "/api/v1/community/comments/:id",
+        "method": "PATCH",
+        "description": "Student, teacher or admin. Authors may edit content; admins moderating within their department may set status to active | hidden | deleted. 403 for non-author, non-admin callers. At least one field required.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - post_comments.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "content": "Count me in — updated.",
+          "status": "hidden"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "cc111111-2222-4333-8444-555555555555",
+            "post_id": "cp111111-2222-4333-8444-555555555555",
+            "content": "Count me in — updated.",
+            "status": "active",
+            "updated_at": "2026-07-28T11:00:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Delete comment",
+        "path": "/api/v1/community/comments/:id",
+        "method": "DELETE",
+        "description": "Student, teacher or admin. Soft delete — sets status='deleted'. Authors may delete their own; admins may delete any comment on a post within their department.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - post_comments.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "cc111111-2222-4333-8444-555555555555",
+            "post_id": "cp111111-2222-4333-8444-555555555555",
+            "content": "Count me in.",
+            "status": "deleted",
+            "updated_at": "2026-07-28T11:30:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Like post",
+        "path": "/api/v1/community/posts/:id/like",
+        "method": "POST",
+        "description": "Student, teacher or admin. 403 for posts outside the caller's department; 400 'You have already liked this post' if a like already exists. No request body. Returns HTTP 201.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - community_posts.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "message": "Post liked successfully"
+          }
+        }
+      },
+      {
+        "name": "Unlike post",
+        "path": "/api/v1/community/posts/:id/like",
+        "method": "DELETE",
+        "description": "Student, teacher or admin. Idempotent — succeeds even if no like row existed. 403 for posts outside the caller's department.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - community_posts.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "message": "Post unliked successfully"
+          }
+        }
+      },
+      {
+        "name": "List departments",
+        "path": "/api/v1/departments",
+        "method": "GET",
+        "description": "Any authenticated user. Ordered by name ascending. Not paginated.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": 1,
+              "name": "Computer Science",
+              "code": "CS",
+              "description": "Department of Computer Science",
+              "created_at": "2026-01-10T09:00:00.000Z",
+              "updated_at": "2026-01-10T09:00:00.000Z"
+            }
+          ]
+        }
+      },
+      {
+        "name": "Get department by id",
+        "path": "/api/v1/departments/:id",
+        "method": "GET",
+        "description": "Any authenticated user. Note the id is an INTEGER here, not a uuid.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "integer (required) - departments.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": 1,
+            "name": "Computer Science",
+            "code": "CS",
+            "description": "Department of Computer Science"
+          }
+        }
+      },
+      {
+        "name": "Create department",
+        "path": "/api/v1/departments",
+        "method": "POST",
+        "description": "Admin or super_admin. 'code' is trimmed and uppercased by Joi before insert.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "name": "Computer Science",
+          "code": "CS",
+          "description": "Department of Computer Science"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": 1,
+            "name": "Computer Science",
+            "code": "CS",
+            "description": "Department of Computer Science",
+            "created_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Update department",
+        "path": "/api/v1/departments/:id",
+        "method": "PATCH",
+        "description": "Admin or super_admin. At least one field required.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "integer (required) - departments.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "name": "Computer Sciences",
+          "code": "CSC",
+          "description": "Renamed department"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": 1,
+            "name": "Computer Sciences",
+            "code": "CSC",
+            "description": "Renamed department"
+          }
+        }
+      },
+      {
+        "name": "Delete department",
+        "path": "/api/v1/departments/:id",
+        "method": "DELETE",
+        "description": "Admin or super_admin. Hard delete; returns the deleted row.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "integer (required) - departments.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": 1,
+            "name": "Computer Science",
+            "code": "CS",
+            "description": "Department of Computer Science"
+          }
+        }
+      },
+      {
+        "name": "AI daily briefing",
+        "path": "/api/v1/ai/briefing",
+        "method": "GET",
+        "description": "Student role only (the whole /ai router is student-gated). Builds a 2-sentence coaching summary from today's classes, pending deadlines and low-attendance warnings. Uses Gemini 1.5 Flash when GEMINI_API_KEY is set, otherwise falls back to a deterministic rule-based summary with the same shape.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "briefContent": "Welcome back! You have 3 lectures scheduled today starting with Data Structures in Lab-3. Make sure to allocate time for your 2 pending assignments, specifically 'Linked List Lab'. Keep your class attendance high and stay eligible!"
+          }
+        }
+      },
+      {
+        "name": "AI copilot chat",
+        "path": "/api/v1/ai/copilot",
+        "method": "POST",
+        "description": "Student role only. 'query' is required (1-2000 chars). When activeCourseId (a course_offerings.id) is supplied, that course's grades and attendance are loaded into the prompt context. Falls back to a rule-based reply when Gemini is unavailable.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "query": "How many classes can I miss in Data Structures and stay eligible?",
+          "activeCourseId": "0f8fad5b-d9cb-469f-a165-70867728950e"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "reply": "Your current attendance in this course stands at 87.5%, comfortably above the UOS 75% requirement. You can safely miss 2 more sessions before dropping below the threshold.",
+            "suggestedChips": [
+              "How do I calculate GPA?",
+              "Check my attendance eligibility",
+              "View my upcoming assignments"
+            ]
+          }
+        }
+      },
+      {
+        "name": "AI grade / GPA projection",
+        "path": "/api/v1/ai/grades/projection",
+        "method": "POST",
+        "description": "Student role only. Derives the GPA required across the remaining credits (a fixed 48-credit forecast) to reach targetCgpa. Both body fields are optional — they fall back to the student's stored target_cgpa and study_intensity.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "targetCgpa": 3.7,
+          "studyIntensity": "high"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "requiredGpa": 3.85,
+            "difficultyMultiplier": 1.2,
+            "percentageHigherThanHistory": 12.6,
+            "strategicAdvice": "Hitting your goal of 3.7 requires a consistent improvement over your current performance. We recommend shifting to a 'high' or 'aggressive' study vigor, aiming for A- grades across core requirements, and resolving assignments at least 48 hours prior to deadlines."
+          }
+        }
+      },
+      {
+        "name": "AI study block suggestions",
+        "path": "/api/v1/ai/schedule/study-blocks",
+        "method": "POST",
+        "description": "Student role only. Finds gaps in the given day's timetable and proposes prep blocks for pending assignments. 'date' is optional and defaults to today.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "date": "2026-08-03"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "insertedPrepBlocks": [
+              {
+                "title": "📚 AI Prep: Data Structures",
+                "startTime": "10:30",
+                "endTime": "12:00",
+                "targetTaskId": "f1e2d3c4-b5a6-4978-8899-001122334455",
+                "room": "Lab-3 Quiet Zone"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "AI task prioritisation",
+        "path": "/api/v1/ai/tasks/prioritize",
+        "method": "POST",
+        "description": "Student role only. No request body is read. Scores every pending/overdue assignment 0-100 on deadline proximity and academic weight, returning them sorted by priority descending.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {},
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "taskId": "f1e2d3c4-b5a6-4978-8899-001122334455",
+              "priorityScore": 85,
+              "reason": "Estimated priority is 85/100. Urgent: deadline is approaching inside 48 hours. Carries significant academic weight for sessional criteria."
+            }
+          ]
+        }
+      },
+      {
+        "name": "AI GPA goal plan",
+        "path": "/api/v1/ai/gpa-goal",
+        "method": "POST",
+        "description": "Student role only. Wraps the projection engine and adds the five courses worth prioritising (heaviest credits first, then lowest grade point). 'upcomingAssessments' is echoed back verbatim and defaults to [].",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "targetCgpa": 3.7,
+          "studyIntensity": "high",
+          "upcomingAssessments": [
+            {
+              "title": "Final Exam",
+              "date": "2026-12-15"
+            }
+          ]
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "targetCgpa": 3.7,
+            "requiredGpa": 3.85,
+            "difficultyMultiplier": 1.2,
+            "prioritizedCourses": [
+              {
+                "offeringId": "0f8fad5b-d9cb-469f-a165-70867728950e",
+                "courseCode": "CS-201",
+                "courseTitle": "Data Structures",
+                "creditHours": 3,
+                "currentGradePoint": 3.7
+              }
+            ],
+            "notes": "Hitting your goal of 3.7 requires a consistent improvement over your current performance.",
+            "upcomingAssessments": [
+              {
+                "title": "Final Exam",
+                "date": "2026-12-15"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "AI attendance guardian",
+        "path": "/api/v1/ai/attendance-guardian",
+        "method": "GET",
+        "description": "Student role only. Computes how many further classes can be safely skipped per course while staying above the 75% UOS threshold, plus warnings for courses at or below the margin.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "safelySkippable": {
+              "CS-201": 2,
+              "MT-101": 0
+            },
+            "warnings": [
+              "MT-101 is close to the attendance threshold with limited skip margin."
+            ],
+            "courses": [
+              {
+                "courseCode": "CS-201",
+                "courseTitle": "Data Structures",
+                "attendancePercentage": 87.5,
+                "safelySkippable": 2,
+                "present": 21,
+                "totalClasses": 24
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "AI smart schedule analysis",
+        "path": "/api/v1/ai/smart-schedule",
+        "method": "GET",
+        "description": "Student role only. Flags back-to-back congestion (gaps under 15 minutes) and suggests revision windows for gaps of 45 minutes or more. 'date' is an optional ISO date; a malformed value is rejected with 400.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": {
+          "date": "string (optional, YYYY-MM-DD) - anchor date for the analysis"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "congestedDays": [
+              {
+                "day": "Monday",
+                "backToBackChains": [
+                  "CS-201 -> MT-101"
+                ]
+              }
+            ],
+            "breakSuggestions": [
+              {
+                "day": "Wednesday",
+                "windowStart": "10:30:00",
+                "windowEnd": "12:00:00",
+                "suggestion": "Use the 90-minute gap for revision or assignment prep."
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "AI skill trends",
+        "path": "/api/v1/ai/skill-trends",
+        "method": "GET",
+        "description": "Student role only. Scans the 200 most recent active community posts in the student's department for a fixed tracked-skill vocabulary and returns the top 5 by mention count, plus recommendations.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "trends": [
+              {
+                "skill": "react",
+                "mentionCount": 14
+              },
+              {
+                "skill": "sql",
+                "mentionCount": 9
+              }
+            ],
+            "recommendations": [
+              "Explore practical work related to react.",
+              "Explore practical work related to sql."
+            ]
+          }
+        }
+      },
+      {
+        "name": "AI announcements summary",
+        "path": "/api/v1/ai/announcements/summary",
+        "method": "GET",
+        "description": "Student role only. Summarises department announcements posted in the last 48 hours into a single sentence. Falls back to a rule-based summary when Gemini is unavailable.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "summary": "Focus on the 'Midterm schedule published' notice published at 09:12. Your immediate review of this notification content is required."
+          }
+        }
+      },
+      {
+        "name": "Upcoming events",
+        "path": "/api/v1/events/upcoming",
+        "method": "GET",
+        "description": "PUBLIC — no authMiddleware on this route (reads are deliberately open to match existing mobile behaviour). Returns events with date >= now, soonest first. 'limit' is an optional integer 1-100 and defaults to 1.",
+        "headers": {},
+        "path_parameters": null,
+        "query_parameters": {
+          "limit": "integer (optional, 1-100, default 1) - how many upcoming events to return"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": [
+            {
+              "id": "ev111111-2222-4333-8444-555555555555",
+              "title": "Annual Tech Gala",
+              "description": "Department showcase and alumni networking evening.",
+              "date": "2026-09-15T14:00:00.000Z",
+              "location": "Main Auditorium",
+              "created_at": "2026-07-28T09:12:00.000Z",
+              "updated_at": "2026-07-28T09:12:00.000Z",
+              "is_upcoming": true
+            }
+          ]
+        }
+      },
+      {
+        "name": "List all events",
+        "path": "/api/v1/events",
+        "method": "GET",
+        "description": "PUBLIC — no authMiddleware. Paginated, newest date first, each row annotated with is_upcoming.",
+        "headers": {},
+        "path_parameters": null,
+        "query_parameters": {
+          "page": "integer (optional, min 1, default 1)",
+          "limit": "integer (optional, 1-100, default 20)"
+        },
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "data": [
+              {
+                "id": "ev111111-2222-4333-8444-555555555555",
+                "title": "Annual Tech Gala",
+                "description": "Department showcase and alumni networking evening.",
+                "date": "2026-09-15T14:00:00.000Z",
+                "location": "Main Auditorium",
+                "created_at": "2026-07-28T09:12:00.000Z",
+                "updated_at": "2026-07-28T09:12:00.000Z",
+                "is_upcoming": true
+              }
+            ],
+            "meta": {
+              "total": 14,
+              "page": 1,
+              "limit": 20
+            }
+          }
+        }
+      },
+      {
+        "name": "Get event by id",
+        "path": "/api/v1/events/:id",
+        "method": "GET",
+        "description": "PUBLIC — no authMiddleware. 404 if the event does not exist.",
+        "headers": {},
+        "path_parameters": {
+          "id": "string (uuid, required) - events.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "ev111111-2222-4333-8444-555555555555",
+            "title": "Annual Tech Gala",
+            "description": "Department showcase and alumni networking evening.",
+            "date": "2026-09-15T14:00:00.000Z",
+            "location": "Main Auditorium",
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T09:12:00.000Z",
+            "is_upcoming": true
+          }
+        }
+      },
+      {
+        "name": "Create event",
+        "path": "/api/v1/events",
+        "method": "POST",
+        "description": "Admin only (authMiddleware + roleMiddleware applied per-route, unlike the public reads above). description and location may be null or empty.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": null,
+        "query_parameters": null,
+        "request_payload": {
+          "title": "Annual Tech Gala",
+          "description": "Department showcase and alumni networking evening.",
+          "date": "2026-09-15T14:00:00.000Z",
+          "location": "Main Auditorium"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "ev111111-2222-4333-8444-555555555555",
+            "title": "Annual Tech Gala",
+            "description": "Department showcase and alumni networking evening.",
+            "date": "2026-09-15T14:00:00.000Z",
+            "location": "Main Auditorium",
+            "created_at": "2026-07-28T09:12:00.000Z",
+            "updated_at": "2026-07-28T09:12:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Update event",
+        "path": "/api/v1/events/:id",
+        "method": "PATCH",
+        "description": "Admin only. At least one field required.",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "Content-Type": "application/json"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - events.id"
+        },
+        "query_parameters": null,
+        "request_payload": {
+          "title": "Annual Tech Gala 2026",
+          "description": "Updated agenda with keynote speakers.",
+          "date": "2026-09-16T14:00:00.000Z",
+          "location": "Sports Complex"
+        },
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "ev111111-2222-4333-8444-555555555555",
+            "title": "Annual Tech Gala 2026",
+            "description": "Updated agenda with keynote speakers.",
+            "date": "2026-09-16T14:00:00.000Z",
+            "location": "Sports Complex",
+            "updated_at": "2026-07-28T12:00:00.000Z"
+          }
+        }
+      },
+      {
+        "name": "Delete event",
+        "path": "/api/v1/events/:id",
+        "method": "DELETE",
+        "description": "Admin only. Hard delete; returns the deleted row. 404 if not found.",
+        "headers": {
+          "Authorization": "Bearer <token>"
+        },
+        "path_parameters": {
+          "id": "string (uuid, required) - events.id"
+        },
+        "query_parameters": null,
+        "request_payload": null,
+        "expected_response_payload": {
+          "success": true,
+          "data": {
+            "id": "ev111111-2222-4333-8444-555555555555",
+            "title": "Annual Tech Gala",
+            "description": "Department showcase and alumni networking evening.",
+            "date": "2026-09-15T14:00:00.000Z",
+            "location": "Main Auditorium"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -109,6 +109,94 @@ export const findById = async (id) => {
   return result.rows[0] || null;
 };
 
+export const getRecent = async ({ page = 1, limit = 20 } = {}) => {
+  const offset = (page - 1) * limit;
+  const result = await pool.query(
+    `SELECT * FROM announcements ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
+
+  const countRes = await pool.query(`SELECT COUNT(*)::int AS total FROM announcements`);
+
+  return {
+    data: result.rows,
+    meta: { total: countRes.rows[0].total, page, limit },
+  };
+};
+
+export const getRelevantForStudent = async (
+  { departmentId, offeringIds, semesters },
+  { page = 1, limit = 20 } = {},
+) => {
+  const conditions = [];
+  const values = [];
+  let idx = 1;
+
+  if (departmentId) {
+    conditions.push(`a.department_id = $${idx++}`);
+    values.push(departmentId);
+  }
+  if (offeringIds && offeringIds.length > 0) {
+    conditions.push(`ao.offering_id = ANY($${idx++}::uuid[])`);
+    values.push(offeringIds);
+  }
+  if (semesters && semesters.length > 0) {
+    conditions.push(`a.semester = ANY($${idx++}::text[])`);
+    values.push(semesters);
+  }
+
+  if (conditions.length === 0) {
+    return { data: [], meta: { total: 0, page, limit } };
+  }
+
+  const whereClause = conditions.join(" OR ");
+  const offset = (page - 1) * limit;
+
+  const query = `
+    SELECT DISTINCT a.* FROM announcements a
+    LEFT JOIN announcement_offerings ao ON ao.announcement_id = a.id
+    WHERE ${whereClause}
+    ORDER BY a.created_at DESC
+    LIMIT $${idx++} OFFSET $${idx++}
+  `;
+  const result = await pool.query(query, [...values, limit, offset]);
+
+  const countQuery = `
+    SELECT COUNT(DISTINCT a.id)::int AS total FROM announcements a
+    LEFT JOIN announcement_offerings ao ON ao.announcement_id = a.id
+    WHERE ${whereClause}
+  `;
+  const countResult = await pool.query(countQuery, values);
+
+  return {
+    data: result.rows,
+    meta: { total: countResult.rows[0].total, page, limit },
+  };
+};
+
+export const markAsRead = async (announcementId, userId, client = pool) => {
+  const query = `
+    INSERT INTO announcement_reads (announcement_id, user_id)
+    VALUES ($1, $2)
+    ON CONFLICT (announcement_id, user_id) DO NOTHING
+    RETURNING *;
+  `;
+  const result = await client.query(query, [announcementId, userId]);
+  return result.rows[0] || null;
+};
+
+export const findReadAnnouncementIds = async (userId, announcementIds, client = pool) => {
+  if (!announcementIds || announcementIds.length === 0) {
+    return [];
+  }
+
+  const result = await client.query(
+    `SELECT announcement_id FROM announcement_reads WHERE user_id = $1 AND announcement_id = ANY($2::uuid[])`,
+    [userId, announcementIds],
+  );
+  return result.rows.map((row) => row.announcement_id);
+};
+
 export const updateAnnouncement = async (id, data, client = pool) => {
   const fields = [];
   const values = [];

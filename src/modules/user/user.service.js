@@ -118,6 +118,21 @@ export const softDeleteUser = async (id) => {
 
 // ── Extended Self-Profile Method for Mobile dashboard ────────────────────────────
 
+/**
+ * Best-effort display name derived from the local part of an email —
+ * "ali.raza@unimate.edu" becomes "Ali Raza".
+ *
+ * A stopgap: `users` has no name column, so this is the only source available.
+ * Replace it the moment a real name field exists.
+ */
+const displayNameFromEmail = (email) =>
+  String(email || "")
+    .split("@")[0]
+    .split(".")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
 const getStudentOverallAttendanceHelper = async (studentId) => {
   const query = `
     SELECT 
@@ -170,12 +185,8 @@ export const getMe = async (userId) => {
       // 2. Fetch attendance statistics to compute average attendance
       const attendance = await getStudentOverallAttendanceHelper(student.id);
 
-      // Extract capitalized name from email
-      const nameParts = user.email.split("@")[0].split(".");
-      const name = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ");
-
       return {
-        name,
+        name: displayNameFromEmail(user.email),
         registrationNumber: student.roll_number,
         cgpa: Number(transcript.cgpa.toFixed(2)) || 0.0,
         creditsEnrolled: transcript.total_credit_hours || 0,
@@ -196,23 +207,28 @@ export const getMe = async (userId) => {
     }
   } else if (user.role === TEACHER) {
     const teacher = await teacherRepository.findByUserId(userId);
-    const nameParts = user.email.split("@")[0].split(".");
-    const name = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ");
 
     return {
-      name,
+      name: displayNameFromEmail(user.email),
       employeeId: teacher?.employee_id || "",
+      departmentId: teacher?.department_id ?? null,
       personal: {
         email: user.email,
       },
     };
   } else {
-    const nameParts = user.email.split("@")[0].split(".");
-    const name = nameParts.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ");
+    // Admin / super_admin. This previously returned a hardcoded "A101" for
+    // every administrator, so the identifier shown in the UI was the same
+    // constant regardless of who signed in.
+    const admin = await adminRepository.findByUserId(userId);
 
     return {
-      name,
-      adminId: "A101",
+      name: displayNameFromEmail(user.email),
+      adminId: admin?.admin_id || "",
+      // Admins are department-scoped for announcements and community
+      // moderation, so the client needs to know which department that is.
+      departmentId: admin?.department_id ?? null,
+      departmentName: admin?.department_name || "",
       personal: {
         email: user.email,
       },

@@ -1,4 +1,5 @@
 import { AppError } from "../../utils/app-error.js";
+import { STUDENT, isAdmin } from "../../constants/roles.js";
 import { withTransaction } from "../../utils/transaction.js";
 import * as gradesRepository from "./grades.repository.js";
 import * as offeringRepository from "../offering/offering.repository.js";
@@ -119,7 +120,7 @@ export const calculateCourseGrade = async (studentId, offeringId, user) => {
   // Authorization check
   await authHelpers.assertAccessToOffering(user, offering);
 
-  if (user.role === "student") {
+  if (user.role === STUDENT) {
     const student = await studentRepository.findByUserId(user.id);
     if (!student || String(student.id) !== String(studentId)) {
       throw new AppError("Forbidden: You can only view your own grades", 403);
@@ -192,7 +193,7 @@ export const calculateCourseGrade = async (studentId, offeringId, user) => {
 };
 
 export const getStudentTranscript = async (studentId, user) => {
-  if (user.role === "student") {
+  if (user.role === STUDENT) {
     const student = await studentRepository.findByUserId(user.id);
     if (!student || String(student.id) !== String(studentId)) {
       throw new AppError(
@@ -200,7 +201,7 @@ export const getStudentTranscript = async (studentId, user) => {
         403,
       );
     }
-  } else if (user.role !== "admin") {
+  } else if (!isAdmin(user.role)) {
     // Teachers shouldn't see full transcripts of students unless they are admins
     throw new AppError(
       "Forbidden: You are not authorized to view student transcripts",

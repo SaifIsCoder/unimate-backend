@@ -23,6 +23,18 @@ router.get(
   asyncHandler(controller.getAnnouncements)
 );
 
+router.get(
+  "/:id",
+  validate({ params: validation.idParams }),
+  asyncHandler(controller.getAnnouncementById)
+);
+
+router.patch(
+  "/:id/read",
+  validate({ params: validation.idParams }),
+  asyncHandler(controller.markAnnouncementRead)
+);
+
 router.patch(
   "/:id",
   roleMiddleware(["admin", "teacher"]),

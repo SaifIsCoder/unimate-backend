@@ -17,6 +17,50 @@ export const findAssignmentsByOffering = async (offeringId, client = pool) => {
   return result.rows;
 };
 
+export const findAllAssignments = async (
+  { offeringId, offeringIds, isDone, page = 1, limit = 20 } = {},
+  client = pool
+) => {
+  const conditions = [];
+  const values = [];
+  let idx = 1;
+
+  if (offeringId) {
+    conditions.push(`a.offering_id = $${idx++}`);
+    values.push(offeringId);
+  } else if (offeringIds && offeringIds.length > 0) {
+    conditions.push(`a.offering_id = ANY($${idx++}::uuid[])`);
+    values.push(offeringIds);
+  }
+
+  if (isDone !== undefined) {
+    conditions.push(`a.is_done = $${idx++}`);
+    values.push(isDone);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const offset = (page - 1) * limit;
+
+  const query = `
+    SELECT a.*, c.code AS course_code, c.title AS course_title, co.semester, co.section
+    FROM ${TABLE} a
+    JOIN course_offerings co ON co.id = a.offering_id
+    JOIN courses c ON c.id = co.course_id
+    ${whereClause}
+    ORDER BY a.due_date ASC
+    LIMIT $${idx++} OFFSET $${idx++}
+  `;
+  const result = await client.query(query, [...values, limit, offset]);
+
+  const countQuery = `SELECT COUNT(*)::int AS total FROM ${TABLE} a ${whereClause}`;
+  const countResult = await client.query(countQuery, values);
+
+  return {
+    data: result.rows,
+    meta: { total: countResult.rows[0].total, page, limit },
+  };
+};
+
 export const findDuplicateAssignment = async (offeringId, title, description, excludeId = null, client = pool) => {
   let queryText = `SELECT * FROM ${TABLE} WHERE offering_id = $1 AND title = $2 AND (COALESCE(description, '') = COALESCE($3, ''))`;
   const params = [offeringId, title, description || null];

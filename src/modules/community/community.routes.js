@@ -26,7 +26,7 @@ router.get(
 
 router.get(
   "/posts/:id",
-  validate({ params: validation.idParams, query: validation.getPostsQuery }),
+  validate({ params: validation.idParams, query: validation.getPostCommentsQuery }),
   asyncHandler(controller.getPostById)
 );
 

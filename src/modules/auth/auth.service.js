@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import env from "../../config/env.js";
-import { ADMIN, STUDENT, TEACHER, SUPER_ADMIN } from "../../constants/roles.js";
+import { ADMIN, STUDENT, TEACHER, SUPER_ADMIN, isAdmin } from "../../constants/roles.js";
 import { AppError } from "../../utils/app-error.js";
 import * as authRepository from "./auth.repository.js";
 import logger from "../../config/logger.js";
@@ -107,7 +107,7 @@ export const loginTeacher = async ({ email, password }) => {
 // ── One-time password reset (student / teacher only) ─────────────────────────
 
 export const resetPassword = async (userId, role, newPassword) => {
-  if (role === ADMIN) {
+  if (isAdmin(role)) {
     throw new AppError("Admins cannot use this endpoint", 403);
   }
 

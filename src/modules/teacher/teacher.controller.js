@@ -37,5 +37,5 @@ export const updateTeacher = async (req, res) => {
 };
 export const deleteTeacher = async (req, res) => {
   await teacherService.deleteTeacher(req.params.id);
-  return sendSuccess(res, null, "Teacher profile deleted successfully");
+  return sendSuccess(res, { message: "Teacher profile deleted successfully" });
 };

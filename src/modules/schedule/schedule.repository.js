@@ -86,6 +86,59 @@ export const findSchedulesByStudent = async (studentId, client = pool) => {
   return result.rows;
 };
 
+// ── Teacher Schedule Queries ─────────────────────────────────────────────────────
+
+export const findSchedulesByTeacher = async (teacherId, client = pool) => {
+  const query = `
+    SELECT
+      s.id AS schedule_id,
+      s.day_of_week,
+      s.start_time,
+      s.end_time,
+      s.room,
+      co.id AS offering_id,
+      co.section,
+      co.semester,
+      co.capacity,
+      c.id AS course_id,
+      c.code AS course_code,
+      c.title AS course_title,
+      (SELECT COUNT(*)::int FROM enrollments e
+        WHERE e.offering_id = co.id AND e.status = 'enrolled') AS enrolled_count
+    FROM course_offerings co
+    JOIN courses c ON c.id = co.course_id
+    JOIN schedules s ON s.offering_id = co.id
+    WHERE co.teacher_id = $1
+    ORDER BY s.day_of_week, s.start_time
+  `;
+  const result = await client.query(query, [teacherId]);
+  return result.rows;
+};
+
+export const findExceptionsByTeacher = async (teacherId, client = pool) => {
+  const query = `
+    SELECT
+      se.id AS exception_id,
+      se.schedule_id,
+      se.date,
+      se.exception_type,
+      se.new_start_time,
+      se.new_end_time,
+      se.new_room,
+      co.id AS offering_id,
+      co.section,
+      c.code AS course_code,
+      c.title AS course_title
+    FROM course_offerings co
+    JOIN courses c ON c.id = co.course_id
+    JOIN schedule_exceptions se ON se.offering_id = co.id
+    WHERE co.teacher_id = $1
+    ORDER BY se.date DESC
+  `;
+  const result = await client.query(query, [teacherId]);
+  return result.rows;
+};
+
 export const findExceptionsByStudent = async (studentId, client = pool) => {
   const query = `
     SELECT 

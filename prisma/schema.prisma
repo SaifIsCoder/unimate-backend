@@ -18,6 +18,7 @@ model User {
   passwordChanged Boolean         @default(false) @map("password_changed")
   admin           Admin?
   announcements   Announcement[]
+  announcementReads AnnouncementRead[]
   communityPosts  CommunityPost[]
   fcmTokens       FcmToken[]
   notifications   Notification[]
@@ -312,12 +313,39 @@ model Announcement {
   semester        String?
   departmentId    Int?                   @map("department_id")
   offeringTargets AnnouncementOffering[]
+  reads           AnnouncementRead[]
   author          User                   @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   department      Department?            @relation(fields: [departmentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   legacyOffering  CourseOffering?        @relation("AnnouncementLegacyOffering", fields: [offeringId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([offeringId], map: "idx_announcements_offering")
   @@map("announcements")
+}
+
+model AnnouncementRead {
+  id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  announcementId String       @map("announcement_id") @db.Uuid
+  userId         String       @map("user_id") @db.Uuid
+  readAt         DateTime     @default(now()) @map("read_at") @db.Timestamp(6)
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([announcementId, userId])
+  @@index([userId], map: "idx_announcement_reads_user_id")
+  @@map("announcement_reads")
+}
+
+model Event {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title       String
+  description String?
+  date        DateTime  @db.Timestamp(6)
+  location    String?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  @@index([date], map: "idx_events_date")
+  @@map("events")
 }
 
 model AnnouncementOffering {

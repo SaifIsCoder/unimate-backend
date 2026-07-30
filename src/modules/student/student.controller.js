@@ -40,7 +40,7 @@ export const updateStudent = async (req, res) => {
 
 export const deleteStudent = async (req, res) => {
   await studentService.deleteStudent(req.params.id);
-  return sendSuccess(res, null, "Student profile deleted successfully");
+  return sendSuccess(res, { message: "Student profile deleted successfully" });
 };
 
 export const getStudentsBySemester = async (req, res) => {

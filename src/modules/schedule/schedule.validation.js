@@ -3,6 +3,23 @@ import Joi from "joi";
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const EXCEPTION_TYPES = ["cancelled", "rescheduled", "extra"];
 
+export const idParams = Joi.object({
+  id: Joi.string().uuid().required(),
+});
+
+export const offeringIdParams = Joi.object({
+  offeringId: Joi.string().uuid().required(),
+});
+
+// Deliberately a pattern-checked STRING, not Joi.date(): the service splits
+// this value on "-" to derive the weekday, so converting it to a Date object
+// would break getResolvedSchedulesForDate.
+export const myScheduleQuery = Joi.object({
+  date: Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .message("date must be in YYYY-MM-DD format"),
+});
+
 export const createScheduleSchema = Joi.object({
   offering_id: Joi.string().uuid().required(),
   day_of_week: Joi.string().valid(...DAYS_OF_WEEK).required(),

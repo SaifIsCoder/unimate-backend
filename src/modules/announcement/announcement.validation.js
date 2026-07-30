@@ -10,7 +10,7 @@ export const getAnnouncementsQuery = Joi.object({
   semester: Joi.string(),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(20),
-}).or("offering_id", "department_id", "semester");
+});
 
 export const createAnnouncementSchema = Joi.object({
   title: Joi.string().required(),

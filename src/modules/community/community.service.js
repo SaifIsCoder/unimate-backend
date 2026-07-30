@@ -1,4 +1,5 @@
 import { AppError } from "../../utils/app-error.js";
+import { STUDENT, TEACHER, isAdmin } from "../../constants/roles.js";
 import { withTransaction } from "../../utils/transaction.js";
 import { pool } from "../../config/db.js";
 import * as communityRepo from "./community.repository.js";
@@ -9,15 +10,15 @@ import { sanitizeHtml } from "../../utils/sanitizer.js";
 
 
 const getUserDepartment = async (userId, role) => {
-  if (role === "student") {
+  if (role === STUDENT) {
     const student = await studentRepo.findByUserId(userId);
     return student?.department_id || null;
   }
-  if (role === "teacher") {
+  if (role === TEACHER) {
     const teacher = await teacherRepo.findByUserId(userId);
     return teacher?.department_id || null;
   }
-  if (role === "admin") {
+  if (isAdmin(role)) {
     const admin = await adminRepo.findByUserId(userId);
     return admin?.department_id || null;
   }
@@ -60,7 +61,7 @@ export const getPostById = async (id, user, options = {}) => {
   if (!post) throw new AppError("Post not found", 404);
 
   const department = await getUserDepartment(user.id, user.role);
-  if (post.department_id !== department && user.role !== "admin") {
+  if (post.department_id !== department && !isAdmin(user.role)) {
     throw new AppError(
       "Forbidden: Post belongs to a different department",
       403,
@@ -77,7 +78,7 @@ export const updatePost = async (id, payload, user) => {
   if (!post) throw new AppError("Post not found", 404);
 
   // Admin moderation (hide)
-  if (user.role === "admin" && payload.status) {
+  if (isAdmin(user.role) && payload.status) {
     const department = await getUserDepartment(user.id, user.role);
     if (post.department_id !== department) {
       throw new AppError(
@@ -109,7 +110,7 @@ export const deletePost = async (id, user) => {
   const post = await communityRepo.getPostById(id);
   if (!post) throw new AppError("Post not found", 404);
 
-  if (user.role === "admin") {
+  if (isAdmin(user.role)) {
     const department = await getUserDepartment(user.id, user.role);
     if (post.department_id !== department) {
       throw new AppError(
@@ -142,7 +143,7 @@ export const createComment = async (postId, payload, user) => {
       );
     }
 
-    if (user.role === "student") {
+    if (user.role === STUDENT) {
       // 2. Lock the student's profile to serialize their comment creation and prevent race condition on limit
       await client.query("SELECT id FROM students WHERE user_id = $1 FOR UPDATE", [
         user.id,
@@ -179,7 +180,7 @@ export const updateComment = async (id, payload, user) => {
   if (!comment) throw new AppError("Comment not found", 404);
 
   // For Admin Moderation
-  if (user.role === 'admin' && payload.status) {
+  if (isAdmin(user.role) && payload.status) {
     const post = await communityRepo.getPostById(comment.post_id);
     const department = await getUserDepartment(user.id, user.role);
     if (post.department_id !== department) {
@@ -208,7 +209,7 @@ export const deleteComment = async (id, user) => {
   const comment = await communityRepo.getCommentById(id);
   if (!comment) throw new AppError("Comment not found", 404);
 
-  if (user.role === 'admin') {
+  if (isAdmin(user.role)) {
     const post = await communityRepo.getPostById(comment.post_id);
     const department = await getUserDepartment(user.id, user.role);
     if (post.department_id !== department) {

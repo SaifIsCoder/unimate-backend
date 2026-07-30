@@ -20,9 +20,17 @@ export const updateCommentSchema = Joi.object({
   status: Joi.string().valid('active', 'hidden', 'deleted')
 }).min(1);
 
+// page/limit rather than limit/offset: the service paginates via
+// utils/pagination.getPagination, which derives the offset from `page`.
 export const getPostsQuery = Joi.object({
-  limit: Joi.number().min(1).max(100),
-  offset: Joi.number().min(0)
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20)
+});
+
+// Comments nested under GET /posts/:id, which the repository pages at 50.
+export const getPostCommentsQuery = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(50)
 });
 
 export const idParams = Joi.object({

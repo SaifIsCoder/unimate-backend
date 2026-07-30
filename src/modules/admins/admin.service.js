@@ -1,4 +1,4 @@
-import { ADMIN } from "../../constants/roles.js";
+import { isAdmin } from "../../constants/roles.js";
 import { AppError } from "../../utils/app-error.js";
 import { omitUndefined } from "../../utils/sql.helpers.js";
 import * as adminRepository from "./admin.repository.js";
@@ -11,7 +11,7 @@ const assertAdminUser = async (userId) => {
     throw new AppError("User not found", 404);
   }
 
-  if (user.role !== ADMIN) {
+  if (!isAdmin(user.role)) {
     throw new AppError("User role must be admin", 400);
   }
 

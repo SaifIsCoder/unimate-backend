@@ -3,6 +3,8 @@ import { withTransaction } from "../../utils/transaction.js";
 import * as scheduleRepository from "./schedule.repository.js";
 import * as offeringRepository from "../offering/offering.repository.js";
 import * as studentRepository from "../student/student.repository.js";
+import * as teacherRepository from "../teacher/teacher.repository.js";
+import * as authHelpers from "../../utils/auth.helpers.js";
 
 // Validation Helper
 const assertOfferingExists = async (offeringId, client) => {
@@ -13,9 +15,20 @@ const assertOfferingExists = async (offeringId, client) => {
   return offering;
 };
 
-export const createSchedule = async (payload) => {
+// Resolves the offering behind a schedule/exception row and asserts the actor owns it.
+const assertOwnsOffering = async (offeringId, user, client) => {
+  const offering = await assertOfferingExists(offeringId, client);
+
+  if (user) {
+    await authHelpers.assertAccessToOffering(user, offering);
+  }
+
+  return offering;
+};
+
+export const createSchedule = async (payload, user) => {
   return withTransaction(async (client) => {
-    await assertOfferingExists(payload.offering_id, client);
+    await assertOwnsOffering(payload.offering_id, user, client);
 
     // Basic overlap check in service layer
     const existingSchedules = await scheduleRepository.findSchedulesByOffering(payload.offering_id, client);
@@ -34,21 +47,28 @@ export const createSchedule = async (payload) => {
   });
 };
 
-export const getSchedulesByOffering = async (offeringId) => {
+export const getSchedulesByOffering = async (offeringId, user) => {
+  await assertOwnsOffering(offeringId, user);
+
   return scheduleRepository.findSchedulesByOffering(offeringId);
 };
 
-export const deleteSchedule = async (id) => {
-  const schedule = await scheduleRepository.deleteSchedule(id);
-  if (!schedule) {
-    throw new AppError("Schedule not found", 404);
-  }
-  return schedule;
+export const deleteSchedule = async (id, user) => {
+  return withTransaction(async (client) => {
+    const schedule = await scheduleRepository.findScheduleById(id, client);
+    if (!schedule) {
+      throw new AppError("Schedule not found", 404);
+    }
+
+    await assertOwnsOffering(schedule.offering_id, user, client);
+
+    return scheduleRepository.deleteSchedule(id, client);
+  });
 };
 
-export const createException = async (payload) => {
+export const createException = async (payload, user) => {
   return withTransaction(async (client) => {
-    await assertOfferingExists(payload.offering_id, client);
+    await assertOwnsOffering(payload.offering_id, user, client);
 
     if (payload.schedule_id) {
       const schedule = await scheduleRepository.findScheduleById(payload.schedule_id, client);
@@ -61,16 +81,70 @@ export const createException = async (payload) => {
   });
 };
 
-export const getExceptionsByOffering = async (offeringId) => {
+export const getExceptionsByOffering = async (offeringId, user) => {
+  await assertOwnsOffering(offeringId, user);
+
   return scheduleRepository.findExceptionsByOffering(offeringId);
 };
 
-export const deleteException = async (id) => {
-  const exception = await scheduleRepository.deleteException(id);
-  if (!exception) {
-    throw new AppError("Schedule exception not found", 404);
+export const deleteException = async (id, user) => {
+  return withTransaction(async (client) => {
+    const exception = await scheduleRepository.findExceptionById(id, client);
+    if (!exception) {
+      throw new AppError("Schedule exception not found", 404);
+    }
+
+    await assertOwnsOffering(exception.offering_id, user, client);
+
+    return scheduleRepository.deleteException(id, client);
+  });
+};
+
+// ── Teacher Schedules ────────────────────────────────────────────────────────────
+
+/**
+ * A teacher's weekly timetable, grouped by day. Scoped by the teacher's own
+ * profile rather than an offering id, so there is nothing here to enumerate —
+ * the caller only ever sees offerings they own.
+ */
+export const getTeacherSchedules = async (userId) => {
+  const teacher = await teacherRepository.findByUserId(userId);
+  if (!teacher) {
+    throw new AppError("Teacher profile not found", 404);
   }
-  return exception;
+
+  const schedules = await scheduleRepository.findSchedulesByTeacher(teacher.id);
+  const exceptions = await scheduleRepository.findExceptionsByTeacher(teacher.id);
+
+  const days = schedules.reduce((acc, schedule) => {
+    if (!acc[schedule.day_of_week]) {
+      acc[schedule.day_of_week] = [];
+    }
+
+    const matchingExceptions = exceptions.filter(
+      (exception) => String(exception.schedule_id) === String(schedule.schedule_id)
+    );
+
+    acc[schedule.day_of_week].push({
+      schedule_id: schedule.schedule_id,
+      offering_id: schedule.offering_id,
+      course_id: schedule.course_id,
+      course_code: schedule.course_code,
+      course_title: schedule.course_title,
+      section: schedule.section,
+      semester: schedule.semester,
+      room: schedule.room,
+      start_time: schedule.start_time,
+      end_time: schedule.end_time,
+      capacity: schedule.capacity,
+      enrolled_count: schedule.enrolled_count,
+      exceptions: matchingExceptions,
+    });
+
+    return acc;
+  }, {});
+
+  return { days, exceptions };
 };
 
 // ── Mobile Student Schedules ─────────────────────────────────────────────────────

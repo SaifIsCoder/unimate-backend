@@ -28,9 +28,34 @@ const assertTeacherExists = async (teacherId) => {
   return teacher;
 };
 
+const WEIGHT_FIELDS = [
+  "mid_weight",
+  "sessional_weight",
+  "final_weight",
+  "practical_weight",
+];
+
+// Grade calculation divides by these percentages, so a set that does not add up
+// to 100 silently produces wrong final marks. Reject it at the boundary.
+const assertWeightsSumToHundred = (weights) => {
+  const total = WEIGHT_FIELDS.reduce(
+    (sum, field) => sum + Number(weights[field] ?? 0),
+    0,
+  );
+
+  // Tolerance for the decimal column round-tripping through JS floats.
+  if (Math.abs(total - 100) > 0.01) {
+    throw new AppError(
+      `Assessment weights must total 100 (received ${total})`,
+      400,
+    );
+  }
+};
+
 export const createOffering = async (payload) => {
   await assertCourseExists(payload.course_id);
   await assertTeacherExists(payload.teacher_id);
+  assertWeightsSumToHundred(payload);
 
   return offeringRepository.create(payload);
 };
@@ -63,6 +88,23 @@ export const updateOffering = async (id, payload) => {
   await assertTeacherExists(payload.teacher_id);
 
   const data = omitUndefined(payload);
+
+  // A partial weight update still has to leave the offering summing to 100, so
+  // validate the merged result rather than just the supplied fields.
+  if (WEIGHT_FIELDS.some((field) => data[field] !== undefined)) {
+    assertWeightsSumToHundred({
+      mid_weight: offering.mid_weight,
+      sessional_weight: offering.sessional_weight,
+      final_weight: offering.final_weight,
+      practical_weight: offering.practical_weight,
+      ...Object.fromEntries(
+        WEIGHT_FIELDS.filter((field) => data[field] !== undefined).map(
+          (field) => [field, data[field]],
+        ),
+      ),
+    });
+  }
+
   return offeringRepository.update(id, data);
 };
 

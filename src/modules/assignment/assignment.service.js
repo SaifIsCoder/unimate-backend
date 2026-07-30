@@ -51,8 +51,39 @@ export const createAssignment = async (payload, user) => {
 export const getAssignmentsByOffering = async (offeringId, user) => {
   const offering = await authHelpers.assertOfferingExists(offeringId);
   await authHelpers.assertAccessToOffering(user, offering);
-  
+
   return assignmentRepository.findAssignmentsByOffering(offeringId);
+};
+
+export const getAssignments = async (query, user) => {
+  const { offering_id: offeringId, is_done: isDone, page, limit } = query;
+
+  let offeringIds;
+  if (user.role === "teacher") {
+    const teacher = await teacherRepository.findByUserId(user.id);
+    if (!teacher) {
+      throw new AppError("Teacher profile not found", 404);
+    }
+
+    const offerings = await teacherRepository.getOfferings(teacher.id);
+    offeringIds = offerings.map((offering) => offering.id);
+
+    if (offeringId && !offeringIds.includes(offeringId)) {
+      throw new AppError("Forbidden: You do not own this offering", 403);
+    }
+
+    if (offeringIds.length === 0) {
+      return { data: [], meta: { total: 0, page: page || 1, limit: limit || 20 } };
+    }
+  }
+
+  return assignmentRepository.findAllAssignments({
+    offeringId,
+    offeringIds: user.role === "teacher" ? offeringIds : undefined,
+    isDone,
+    page,
+    limit,
+  });
 };
 
 export const deleteAssignment = async (id, user) => {
@@ -179,6 +210,11 @@ export const getMyAssignments = async (userId, statusFilter) => {
   return assignments.filter((assignment) => assignment.status === statusFilter);
 };
 
+export const getMySubmissions = async (userId) => {
+  const assignments = await getMyAssignments(userId);
+  return assignments.filter((assignment) => Boolean(assignment.submittedAt));
+};
+
 export const updateMyAssignmentProgress = async (userId, assignmentId, progress, status) => {
   const student = await studentRepository.findByUserId(userId);
   if (!student) {
@@ -193,23 +229,43 @@ export const updateMyAssignmentProgress = async (userId, assignmentId, progress,
   return assignmentRepository.upsertAssignmentProgress(student.id, assignmentId, progress, status);
 };
 
-// export const submitMyAssignment = async (userId, assignmentId, fileUrl, textContent) => {
-//   const student = await studentRepository.findByUserId(userId);
-//   if (!student) {
-//     throw new AppError("Student profile not found", 404);
-//   }
+export const submitMyAssignment = async (userId, assignmentId, fileUrl, textContent) => {
+  const student = await studentRepository.findByUserId(userId);
+  if (!student) {
+    throw new AppError("Student profile not found", 404);
+  }
 
-//   const assignment = await assignmentRepository.findAssignmentById(assignmentId);
-//   if (!assignment) {
-//     throw new AppError("Assignment not found", 404);
-//   }
+  const assignment = await assignmentRepository.findAssignmentById(assignmentId);
+  if (!assignment) {
+    throw new AppError("Assignment not found", 404);
+  }
 
-//   if (!fileUrl && !textContent) {
-//     throw new AppError("Either fileUrl or textContent is required", 400);
-//   }
+  const enrollment = await enrollmentRepository.findByStudentAndOffering(
+    student.id,
+    assignment.offering_id,
+  );
+  if (!enrollment || enrollment.status !== "enrolled") {
+    throw new AppError("Forbidden: You are not enrolled in this offering", 403);
+  }
 
-//   return assignmentRepository.upsertAssignmentSubmission(student.id, assignmentId, fileUrl, textContent);
-// };
+  if (new Date(assignment.due_date) < new Date()) {
+    throw new AppError("Submission deadline has passed", 400);
+  }
+
+  if (!fileUrl && !textContent) {
+    throw new AppError("Either fileUrl or textContent is required", 400);
+  }
+
+  const result = await assignmentRepository.upsertAssignmentSubmission(student.id, assignmentId, fileUrl, textContent);
+
+  logAudit({
+    action: "ASSIGNMENT_SUBMITTED",
+    actorId: userId,
+    targetId: assignmentId,
+  }, `Assignment ${assignmentId} submitted by student ${student.id}`);
+
+  return result;
+};
 
 export const getAssignmentDetails = async (assignmentId, user) => {
   if (user.role === "student") {

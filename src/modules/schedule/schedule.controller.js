@@ -3,34 +3,41 @@ import { sendSuccess } from "../../utils/response.js";
 
 // Schedules
 export const createSchedule = async (req, res) => {
-  const schedule = await scheduleService.createSchedule(req.body);
+  const schedule = await scheduleService.createSchedule(req.body, req.user);
   return sendSuccess(res, schedule, 201);
 };
 
 export const getSchedulesByOffering = async (req, res) => {
-  const schedules = await scheduleService.getSchedulesByOffering(req.params.offeringId);
+  const schedules = await scheduleService.getSchedulesByOffering(req.params.offeringId, req.user);
   return sendSuccess(res, schedules);
 };
 
 export const deleteSchedule = async (req, res) => {
-  const schedule = await scheduleService.deleteSchedule(req.params.id);
+  const schedule = await scheduleService.deleteSchedule(req.params.id, req.user);
   return sendSuccess(res, schedule);
 };
 
 // Exceptions
 export const createException = async (req, res) => {
-  const exception = await scheduleService.createException(req.body);
+  const exception = await scheduleService.createException(req.body, req.user);
   return sendSuccess(res, exception, 201);
 };
 
 export const getExceptionsByOffering = async (req, res) => {
-  const exceptions = await scheduleService.getExceptionsByOffering(req.params.offeringId);
+  const exceptions = await scheduleService.getExceptionsByOffering(req.params.offeringId, req.user);
   return sendSuccess(res, exceptions);
 };
 
 export const deleteException = async (req, res) => {
-  const exception = await scheduleService.deleteException(req.params.id);
+  const exception = await scheduleService.deleteException(req.params.id, req.user);
   return sendSuccess(res, exception);
+};
+
+// ── Teacher Schedule Controller ──────────────────────────────────────────────────
+
+export const getMyTeachingSchedule = async (req, res) => {
+  const data = await scheduleService.getTeacherSchedules(req.user.id);
+  return sendSuccess(res, data);
 };
 
 // ── Mobile Student Schedule Controller ───────────────────────────────────────────

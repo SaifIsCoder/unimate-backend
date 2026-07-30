@@ -16,6 +16,13 @@ router.get(
   asyncHandler(gradesController.getMyGradesSummary)
 );
 
+// Alias: the mobile client is configured to call GET /grades/my
+router.get(
+  "/my",
+  roleMiddleware(["student"]),
+  asyncHandler(gradesController.getMyGradesSummary)
+);
+
 router.get(
   "/my/course/:courseId",
   roleMiddleware(["student"]),
@@ -32,6 +39,7 @@ router.get(
 router.post(
   "/gpa-goals",
   roleMiddleware(["student"]),
+  validate({ body: validation.updateGpaGoalsSchema }),
   asyncHandler(gradesController.updateGpaGoals)
 );
 

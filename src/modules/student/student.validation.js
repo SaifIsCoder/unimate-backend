@@ -6,6 +6,10 @@ export const idParams = Joi.object({
 
 export const emptyQuery = Joi.object({});
 
+export const semesterParams = Joi.object({
+  semester: Joi.string().trim().min(1).max(50).required(),
+});
+
 export const createStudentBody = Joi.object({
   user_id: Joi.string().uuid().required(),
   roll_number: Joi.string().trim().min(2).max(50).required(),

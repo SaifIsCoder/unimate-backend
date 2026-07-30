@@ -25,7 +25,11 @@ export const getEnrollmentsByStudent = async (req, res) => {
 
 export const getEnrollmentsByOffering = async (req, res) => {
   const { page, limit } = req.query;
-  const result = await enrollmentService.getEnrollmentsByOffering(req.params.offeringId, { page, limit });
+  const result = await enrollmentService.getEnrollmentsByOffering(
+    req.params.offeringId,
+    { page, limit },
+    req.user,
+  );
   return sendSuccess(res, result);
 };
 

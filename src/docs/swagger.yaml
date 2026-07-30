@@ -54,6 +54,7 @@ tags:
   - name: Notifications
   - name: Community
   - name: Admins
+  - name: Events
 
 paths:
   # ==============================
@@ -86,6 +87,25 @@ paths:
           description: Login successful
         "401":
           description: Invalid credentials
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token (alias of /auth/refresh-token, used by the mobile client)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: New access/refresh token pair
+        "401":
+          description: Invalid or expired refresh token
   /auth/reset-password:
     post:
       tags: [Auth]
@@ -337,8 +357,29 @@ paths:
     post:
       tags: [Offerings]
       summary: Create an offering
+      description: >-
+        Roles: admin. Assessment weights are percentages of the final course
+        grade and must total 100. Omitted weights default to 30/20/50/0.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [course_id, semester, section, capacity]
+              properties:
+                course_id: { type: string, format: uuid }
+                teacher_id: { type: string, format: uuid, nullable: true }
+                semester: { type: string }
+                section: { type: string }
+                capacity: { type: integer, minimum: 1, maximum: 500 }
+                mid_weight: { type: number, minimum: 0, maximum: 100, default: 30 }
+                sessional_weight: { type: number, minimum: 0, maximum: 100, default: 20 }
+                final_weight: { type: number, minimum: 0, maximum: 100, default: 50 }
+                practical_weight: { type: number, minimum: 0, maximum: 100, default: 0 }
       responses:
         "201": { description: Offering created }
+        "400": { description: Validation error (e.g. weights do not total 100) }
   /offerings/{id}:
     get:
       tags: [Offerings]
@@ -349,9 +390,31 @@ paths:
     patch:
       tags: [Offerings]
       summary: Update offering
+      description: >-
+        Roles: admin. Accepts the same assessment-weight fields as create. A
+        partial weight update is validated against the offering's stored
+        weights, so the merged result must still total 100.
       parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                course_id: { type: string, format: uuid }
+                teacher_id: { type: string, format: uuid, nullable: true }
+                semester: { type: string }
+                section: { type: string }
+                capacity: { type: integer, minimum: 1, maximum: 500 }
+                mid_weight: { type: number, minimum: 0, maximum: 100 }
+                sessional_weight: { type: number, minimum: 0, maximum: 100 }
+                final_weight: { type: number, minimum: 0, maximum: 100 }
+                practical_weight: { type: number, minimum: 0, maximum: 100 }
       responses:
         "200": { description: Offering updated }
+        "400": { description: Validation error (e.g. weights do not total 100) }
     delete:
       tags: [Offerings]
       summary: Delete offering
@@ -390,10 +453,19 @@ paths:
   /enrollments/offering/{offeringId}:
     get:
       tags: [Enrollments]
-      summary: Get enrollments by offering
-      parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
+      summary: Get the class roster for an offering
+      description: >-
+        Roles: admin, teacher. Teachers may only read rosters for offerings they
+        own (403 otherwise). This is the source of the `student_id` values
+        required by `POST /grades` and `POST /attendance`.
+      parameters:
+        - { in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }
+        - { in: query, name: page, schema: { type: integer, default: 1 } }
+        - { in: query, name: limit, schema: { type: integer, default: 20 } }
       responses:
         "200": { description: Offering enrollments }
+        "403": { description: Teacher does not own this offering }
+        "404": { description: Offering not found }
   /enrollments/{id}:
     get:
       tags: [Enrollments]
@@ -417,46 +489,78 @@ paths:
   # ==============================
   # SCHEDULE MODULE
   # ==============================
+  # Every /schedules route below resolves the target offering and enforces
+  # ownership: admins pass, teachers must own the offering, students must be
+  # actively enrolled in it. Anyone else gets a 403.
   /schedules:
     post:
       tags: [Schedule]
       summary: Create a schedule
+      description: "Roles: admin, teacher. Teachers may only schedule their own offerings."
       responses:
         "201": { description: Schedule created }
+        "403": { description: Caller does not own this offering }
+        "409": { description: Overlaps an existing schedule for this offering }
+  /schedules/me:
+    get:
+      tags: [Schedule]
+      summary: The signed-in teacher's weekly timetable
+      description: >-
+        Roles: teacher. `GET /schedules` is student-only, so teachers read their
+        own timetable here. Scoped to the caller's teacher profile, so it only
+        ever returns offerings they own. Each slot carries `enrolled_count` and
+        `capacity` for the dashboard, plus any schedule exceptions.
+      responses:
+        "200":
+          description: Timetable grouped by day of week
+        "403": { description: Caller is not a teacher }
+        "404": { description: No teacher profile for this account }
   /schedules/offering/{offeringId}:
     get:
       tags: [Schedule]
       summary: Get schedules by offering
+      description: "Admin, the owning teacher, or an enrolled student."
       parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200": { description: Schedules list }
+        "403": { description: Caller has no access to this offering }
   /schedules/{id}:
     delete:
       tags: [Schedule]
       summary: Delete schedule
+      description: "Roles: admin, teacher. Teachers may only delete schedules on offerings they own."
       parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200": { description: Schedule deleted }
+        "403": { description: Caller does not own this offering }
+        "404": { description: Schedule not found }
   /schedules/exceptions:
     post:
       tags: [Schedule]
       summary: Create schedule exception
+      description: "Roles: admin, teacher. Teachers may only add exceptions to their own offerings."
       responses:
         "201": { description: Exception created }
+        "403": { description: Caller does not own this offering }
   /schedules/offering/{offeringId}/exceptions:
     get:
       tags: [Schedule]
       summary: Get exceptions by offering
+      description: "Admin, the owning teacher, or an enrolled student."
       parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200": { description: Exceptions list }
+        "403": { description: Caller has no access to this offering }
   /schedules/exceptions/{id}:
     delete:
       tags: [Schedule]
       summary: Delete schedule exception
+      description: "Roles: admin, teacher. Teachers may only delete exceptions on their own offerings."
       parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200": { description: Exception deleted }
+        "403": { description: Caller does not own this offering }
+        "404": { description: Exception not found }
 
   # ==============================
   # ATTENDANCE MODULE
@@ -481,6 +585,12 @@ paths:
       parameters: [{ in: path, name: offeringId, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200": { description: Offering attendance stats }
+  /attendance/my:
+    get:
+      tags: [Attendance]
+      summary: Get logged-in student's attendance summary (alias of /attendance/my/summary)
+      responses:
+        "200": { description: Student attendance summary }
 
   # ==============================
   # ASSIGNMENTS MODULE
@@ -491,6 +601,48 @@ paths:
       summary: Create an assignment
       responses:
         "201": { description: Assignment created }
+    get:
+      tags: [Assignments]
+      summary: List assignments (Admin sees all, Teacher sees their own offerings)
+      parameters:
+        - in: query
+          name: offering_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: is_done
+          schema: { type: boolean }
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200": { description: Paginated list of assignments }
+  /assignments/my/submissions:
+    get:
+      tags: [Assignments]
+      summary: Get logged-in student's submitted assignments
+      responses:
+        "200": { description: List of submitted assignments }
+  /assignments/{id}/submit:
+    post:
+      tags: [Assignments]
+      summary: Submit (or resubmit) an assignment as the logged-in student
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fileUrl: { type: string }
+                textContent: { type: string }
+      responses:
+        "200": { description: Submission recorded }
+        "400": { description: Submission deadline has passed, or neither fileUrl nor textContent provided }
+        "403": { description: Not enrolled in this offering }
   /assignments/offering/{offeringId}:
     get:
       tags: [Assignments]
@@ -557,6 +709,12 @@ paths:
       parameters: [{ in: path, name: studentId, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200": { description: Student transcript }
+  /grades/my:
+    get:
+      tags: [Grades]
+      summary: Get logged-in student's grades summary (alias of /grades/my/summary)
+      responses:
+        "200": { description: Student grades summary }
 
   # ==============================
   # ANNOUNCEMENTS MODULE
@@ -569,10 +727,37 @@ paths:
         "201": { description: Announcement created }
     get:
       tags: [Announcements]
-      summary: Get all announcements
+      summary: >-
+        Get announcements. Optionally filter by offering_id, department_id, or semester;
+        with no filter, returns a role-aware default (student: relevant to their
+        department/enrollments; teacher: their department; admin: most recent institution-wide).
+        Each item includes is_read for the caller.
+      parameters:
+        - in: query
+          name: offering_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: department_id
+          schema: { type: integer }
+        - in: query
+          name: semester
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
       responses:
         "200": { description: List of announcements }
   /announcements/{id}:
+    get:
+      tags: [Announcements]
+      summary: Get a single announcement by ID (includes is_read for the caller)
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Announcement data }
+        "404": { description: Announcement not found }
     patch:
       tags: [Announcements]
       summary: Update announcement
@@ -585,6 +770,14 @@ paths:
       parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200": { description: Announcement deleted }
+  /announcements/{id}/read:
+    patch:
+      tags: [Announcements]
+      summary: Mark an announcement as read by the logged-in user
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Announcement marked as read }
+        "404": { description: Announcement not found }
 
   # ==============================
   # NOTIFICATIONS MODULE
@@ -710,3 +903,92 @@ paths:
       parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200": { description: Post unliked }
+
+  # ==============================
+  # EVENTS MODULE
+  # ==============================
+  /events/upcoming:
+    get:
+      tags: [Events]
+      summary: Get the next upcoming event(s)
+      security: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 1 }
+      responses:
+        "200": { description: List of upcoming events }
+  /events:
+    get:
+      tags: [Events]
+      summary: List all events
+      security: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200": { description: Paginated list of events }
+    post:
+      tags: [Events]
+      summary: Create an event
+      description: "Roles: admin. Reads on this module are public; writes are not."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, date]
+              properties:
+                title: { type: string, minLength: 2, maxLength: 160 }
+                description: { type: string, maxLength: 2000, nullable: true }
+                date: { type: string, format: date-time }
+                location: { type: string, maxLength: 160, nullable: true }
+      responses:
+        "201": { description: Event created }
+        "400": { description: Validation error }
+        "401": { description: Authentication required }
+        "403": { description: Caller is not an admin }
+  /events/{id}:
+    get:
+      tags: [Events]
+      summary: Get a single event by ID
+      security: []
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Event data }
+        "404": { description: Event not found }
+    patch:
+      tags: [Events]
+      summary: Update an event
+      description: "Roles: admin."
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                title: { type: string, minLength: 2, maxLength: 160 }
+                description: { type: string, maxLength: 2000, nullable: true }
+                date: { type: string, format: date-time }
+                location: { type: string, maxLength: 160, nullable: true }
+      responses:
+        "200": { description: Event updated }
+        "403": { description: Caller is not an admin }
+        "404": { description: Event not found }
+    delete:
+      tags: [Events]
+      summary: Delete an event
+      description: "Roles: admin."
+      parameters: [{ in: path, name: id, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: Event deleted }
+        "403": { description: Caller is not an admin }
+        "404": { description: Event not found }

@@ -1,8 +1,8 @@
-import { ADMIN } from "../constants/roles.js";
+import { isAdmin } from "../constants/roles.js";
 import { AppError } from "../utils/app-error.js";
 
 export const selfOrAdminByOwner = (findResourceById, label) => async (req, res, next) => {
-  if (req.user?.role === ADMIN) {
+  if (isAdmin(req.user?.role)) {
     return next();
   }
 

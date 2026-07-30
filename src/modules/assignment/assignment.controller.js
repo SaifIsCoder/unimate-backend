@@ -14,6 +14,11 @@ export const getAssignmentsByOffering = async (req, res) => {
   return sendSuccess(res, assignments);
 };
 
+export const getAssignments = async (req, res) => {
+  const result = await assignmentService.getAssignments(req.query, req.user);
+  return sendSuccess(res, result);
+};
+
 export const deleteAssignment = async (req, res) => {
   const assignment = await assignmentService.deleteAssignment(req.params.id, req.user);
   return sendSuccess(res, assignment);
@@ -40,6 +45,11 @@ export const getMyAssignments = async (req, res) => {
   return sendSuccess(res, data);
 };
 
+export const getMySubmissions = async (req, res) => {
+  const data = await assignmentService.getMySubmissions(req.user.id);
+  return sendSuccess(res, data);
+};
+
 export const updateMyAssignmentProgress = async (req, res) => {
   const progress = Number(req.body.progress);
   const status = req.body.status;
@@ -47,11 +57,11 @@ export const updateMyAssignmentProgress = async (req, res) => {
   return sendSuccess(res, result);
 };
 
-// export const submitMyAssignment = async (req, res) => {
-//   const { fileUrl, textContent } = req.body;
-//   const result = await assignmentService.submitMyAssignment(req.user.id, req.params.id, fileUrl, textContent);
-//   return sendSuccess(res, result);
-// };
+export const submitMyAssignment = async (req, res) => {
+  const { fileUrl, textContent } = req.body;
+  const result = await assignmentService.submitMyAssignment(req.user.id, req.params.id, fileUrl, textContent);
+  return sendSuccess(res, result);
+};
 
 export const getAssignmentDetails = async (req, res) => {
   const details = await assignmentService.getAssignmentDetails(req.params.id, req.user);

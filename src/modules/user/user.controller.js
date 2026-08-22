@@ -7,7 +7,7 @@ export const createUser = async (req, res) => {
 };
 
 export const getUsers = async (req, res) => {
-  const users = await userService.getUsers();
+  const users = await userService.getUsers(req.query);
   return sendSuccess(res, users);
 };
 

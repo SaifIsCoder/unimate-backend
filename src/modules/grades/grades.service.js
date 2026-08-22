@@ -256,14 +256,39 @@ export const getMyGradesSummary = async (userId) => {
     gpaGoal: Number(student.target_cgpa) || 3.0,
     studyIntensity: student.study_intensity || "balanced",
     semesters,
-    courses: transcript.courses.map(c => ({
-      offering_id: c.offering_id,
-      course_code: c.course_code,
-      course_title: c.course,
-      credit_hours: c.credit_hours,
-      marks: c.final_marks,
-      grade: c.letter_grade,
-      gpa: c.grade_point
+    courses: await Promise.all(transcript.courses.map(async c => {
+      let components = [];
+      let calculation = {};
+      try {
+        const details = await getMyCourseGradeDetails(userId, c.course_id);
+        components = details.components;
+        calculation = details.calculation;
+      } catch (err) {
+        // Fallback if not found in active enrollment (e.g. past semester)
+      }
+
+      // Calculate a rough progress percentage (sum of max scores for graded assessments / total weights)
+      let progress = 0;
+      let sessionalMax = 0;
+      components.forEach(comp => {
+         if (comp.assessmentType === 'midterm') progress += 30;
+         else if (comp.assessmentType === 'final') progress += 50;
+         else if (comp.assessmentType === 'practical') progress += 0;
+         else sessionalMax += comp.maxScore;
+      });
+      if (sessionalMax > 0) progress += 20; // Assume sessional is 20%
+
+      return {
+        offering_id: c.offering_id,
+        course_code: c.course_code,
+        course_title: c.course,
+        credit_hours: c.credit_hours,
+        marks: c.final_marks,
+        grade: c.letter_grade,
+        gpa: c.grade_point,
+        progress: Math.min(100, progress),
+        components
+      };
     }))
   };
 };
@@ -278,21 +303,52 @@ export const getMyAllSemesters = async (userId) => {
   const transcript = academicRules.transformTranscriptData(rawTranscript);
 
   // Group by semester
-  const semesters = {};
+  const semestersMap = {};
   transcript.courses.forEach(c => {
     const sem = String(c.semester || 1);
-    if (!semesters[sem]) {
-      semesters[sem] = [];
+    if (!semestersMap[sem]) {
+      semestersMap[sem] = {
+        id: `sem-${sem}`,
+        name: `Semester ${sem}`,
+        term: `Term ${sem}`,
+        isCurrent: sem === String(student.current_semester),
+        finalNumbersUpdated: true,
+        creditHours: 0,
+        qualityPoints: 0,
+        courses: []
+      };
     }
-    semesters[sem].push({
+    
+    semestersMap[sem].creditHours += Number(c.credit_hours) || 0;
+    semestersMap[sem].qualityPoints += Number(c.quality_points) || 0;
+
+    semestersMap[sem].courses.push({
+      id: c.offering_id,
       course: c.course,
+      name: c.course,
       code: c.course_code,
+      teacher: "Staff", // Fallback, could fetch real teacher
       credit_hours: c.credit_hours,
+      creditHours: c.credit_hours, // duplicate for mobile
       marks: c.final_marks,
+      total: c.final_marks, // for mobile
       grade: c.letter_grade,
-      gpa: c.grade_point
+      letter: c.letter_grade, // for mobile
+      gpa: c.grade_point,
+      gpaPoints: c.grade_point, // for mobile
+      progress: 100, // past semesters are 100%
+      midterm: 0,
+      assignments: 0
     });
   });
+
+  const semesters = Object.values(semestersMap).map(sem => {
+    sem.gpa = sem.creditHours ? Number((sem.qualityPoints / sem.creditHours).toFixed(2)) : 0;
+    return sem;
+  });
+
+  // Sort semesters descending
+  semesters.sort((a, b) => b.name.localeCompare(a.name));
 
   return semesters;
 };

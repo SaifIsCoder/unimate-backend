@@ -7,7 +7,7 @@ export const createDepartment = async (req, res) => {
 };
 
 export const getDepartments = async (req, res) => {
-  const departments = await departmentService.getDepartments();
+  const departments = await departmentService.getDepartments(req.query);
   return sendSuccess(res, departments);
 };
 

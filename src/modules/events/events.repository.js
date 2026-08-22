@@ -5,7 +5,7 @@ const TABLE = "events";
 
 export const findUpcomingEvents = async (limit = 1, client = pool) => {
   const query = `
-    SELECT id, title, description, date, location, created_at, updated_at
+    SELECT id, title, description, date, location, category, created_at, updated_at
     FROM events
     WHERE date >= NOW()
     ORDER BY date ASC

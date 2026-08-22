@@ -5,7 +5,7 @@ import roleMiddleware from "../../middlewares/role.middleware.js";
 import validate from "../../middlewares/validate.middleware.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import * as controller from "./teacher.controller.js";
-import { createTeacherBody, emptyQuery, idParams, updateTeacherBody } from "./teacher.validation.js";
+import { createTeacherBody, emptyQuery, listQuery, idParams, updateTeacherBody } from "./teacher.validation.js";
 
 const router = express.Router();
 
@@ -29,7 +29,7 @@ router.get(
 router.get(
   "/",
   roleMiddleware([ADMIN]),
-  validate({ query: emptyQuery }),
+  validate({ query: listQuery }),
   asyncHandler(controller.getTeachers),
 );
 router.get(

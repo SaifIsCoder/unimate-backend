@@ -1,6 +1,7 @@
 import { AppError } from "../../utils/app-error.js";
 import { omitUndefined } from "../../utils/sql.helpers.js";
 import * as courseRepository from "./course.repository.js";
+import { getPagination } from "../../utils/pagination.js";
 
 const assertUniqueCode = async (code, currentCourseId = null) => {
   if (!code) {
@@ -20,8 +21,9 @@ export const createCourse = async (payload) => {
   return courseRepository.create(payload);
 };
 
-export const getCourses = async () => {
-  return courseRepository.findAll();
+export const getCourses = async (query = {}) => {
+  const { page, limit, offset } = getPagination(query);
+  return courseRepository.findAll(limit, offset);
 };
 
 export const getCourseById = async (id) => {

@@ -5,14 +5,14 @@ import roleMiddleware from "../../middlewares/role.middleware.js";
 import validate from "../../middlewares/validate.middleware.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import * as controller from "./department.controller.js";
-import { createDepartmentBody, idParams, updateDepartmentBody } from "./department.validation.js";
+import { createDepartmentBody, idParams, updateDepartmentBody, listQuery } from "./department.validation.js";
 
 const router = express.Router();
 
 // Publicly viewable by any authenticated user
 router.use(authMiddleware);
 
-router.get("/", asyncHandler(controller.getDepartments));
+router.get("/", validate({ query: listQuery }), asyncHandler(controller.getDepartments));
 router.get("/:id", validate({ params: idParams }), asyncHandler(controller.getDepartmentById));
 
 // Admin/SuperAdmin only: modifications

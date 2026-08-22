@@ -9,9 +9,23 @@ export const create = async (data) => {
   return result.rows[0];
 };
 
-export const findAll = async () => {
-  const result = await pool.query(`SELECT * FROM ${TABLE} ORDER BY name ASC`);
-  return result.rows;
+export const findAll = async (limit = 20, offset = 0) => {
+  const result = await pool.query(
+    `SELECT * FROM ${TABLE} ORDER BY name ASC LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
+  
+  const countResult = await pool.query(`SELECT COUNT(*)::int as total FROM ${TABLE}`);
+  const total = countResult.rows[0].total;
+
+  return {
+    data: result.rows,
+    meta: {
+      total,
+      limit,
+      page: Math.floor(offset / limit) + 1
+    }
+  };
 };
 
 export const findById = async (id) => {

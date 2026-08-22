@@ -1,13 +1,15 @@
 import { AppError } from "../../utils/app-error.js";
 import * as departmentRepository from "./department.repository.js";
 import { omitUndefined } from "../../utils/sql.helpers.js";
+import { getPagination } from "../../utils/pagination.js";
 
 export const createDepartment = async (payload) => {
   return departmentRepository.create(payload);
 };
 
-export const getDepartments = async () => {
-  return departmentRepository.findAll();
+export const getDepartments = async (query = {}) => {
+  const { page, limit, offset } = getPagination(query);
+  return departmentRepository.findAll(limit, offset);
 };
 
 export const getDepartmentById = async (id) => {

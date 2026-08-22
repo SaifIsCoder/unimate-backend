@@ -4,6 +4,10 @@ export const idParams = Joi.object({
   id: Joi.string().uuid().required(),
 });
 
+import { paginationSchema } from "../../utils/pagination.js";
+
+export const listQuery = Joi.object(paginationSchema);
+
 export const emptyQuery = Joi.object({});
 
 export const createCourseBody = Joi.object({

@@ -5,7 +5,7 @@ import roleMiddleware from "../../middlewares/role.middleware.js";
 import validate from "../../middlewares/validate.middleware.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import * as controller from "./course.controller.js";
-import { createCourseBody, emptyQuery, idParams, updateCourseBody } from "./course.validation.js";
+import { createCourseBody, emptyQuery, listQuery, idParams, updateCourseBody } from "./course.validation.js";
 
 const router = express.Router();
 
@@ -17,7 +17,7 @@ router.post(
   validate({ query: emptyQuery, body: createCourseBody }),
   asyncHandler(controller.createCourse)
 );
-router.get("/", validate({ query: emptyQuery }), asyncHandler(controller.getCourses));
+router.get("/", validate({ query: listQuery }), asyncHandler(controller.getCourses));
 router.get("/:id", validate({ params: idParams, query: emptyQuery }), asyncHandler(controller.getCourseById));
 router.patch(
   "/:id",

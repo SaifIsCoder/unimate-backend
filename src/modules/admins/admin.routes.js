@@ -5,7 +5,7 @@ import roleMiddleware from "../../middlewares/role.middleware.js";
 import validate from "../../middlewares/validate.middleware.js";
 import asyncHandler from "../../utils/asyncHandler.js";
 import * as controller from "./admin.controller.js";
-import { updateAdminSchema, idParams } from "./admin.validation.js";
+import { updateAdminSchema, idParams, listQuery } from "./admin.validation.js";
 
 const router = express.Router();
 
@@ -22,6 +22,7 @@ router.get(
 router.get(
   "/",
   roleMiddleware([ADMIN, SUPER_ADMIN]),
+  validate({ query: listQuery }),
   asyncHandler(controller.getAdmins)
 );
 

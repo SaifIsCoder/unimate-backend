@@ -7,7 +7,7 @@ export const createTeacher = async (req, res) => {
 };
 
 export const getTeachers = async (req, res) => {
-  const teachers = await teacherService.getTeachers();
+  const teachers = await teacherService.getTeachers(req.query);
   return sendSuccess(res, teachers);
 };
 

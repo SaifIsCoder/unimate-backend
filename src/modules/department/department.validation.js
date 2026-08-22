@@ -1,4 +1,7 @@
 import Joi from "joi";
+import { paginationSchema } from "../../utils/pagination.js";
+
+export const listQuery = Joi.object(paginationSchema);
 
 export const idParams = Joi.object({
   id: Joi.number().integer().required(),

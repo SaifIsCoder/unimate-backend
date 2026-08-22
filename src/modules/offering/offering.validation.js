@@ -6,9 +6,12 @@ export const idParams = Joi.object({
 
 export const emptyQuery = Joi.object({});
 
+import { paginationSchema } from "../../utils/pagination.js";
+
 export const offeringQuery = Joi.object({
   semester: Joi.string().trim().max(50),
   course_id: Joi.string().uuid(),
+  ...paginationSchema,
 });
 
 // Assessment weights feed academic-rules.calculateRawMarks(); each is a

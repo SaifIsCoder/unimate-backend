@@ -3,6 +3,7 @@ import { AppError } from "../../utils/app-error.js";
 import { omitUndefined } from "../../utils/sql.helpers.js";
 import * as teacherRepository from "./teacher.repository.js";
 import * as userRepository from "../user/user.repository.js";
+import { getPagination } from "../../utils/pagination.js";
 
 const assertTeacherUser = async (userId) => {
   const user = await userRepository.findById(userId);
@@ -30,8 +31,9 @@ export const createTeacher = async (payload) => {
   return teacherRepository.create(payload);
 };
 
-export const getTeachers = async () => {
-  return teacherRepository.findAll();
+export const getTeachers = async (query = {}) => {
+  const { page, limit, offset } = getPagination(query);
+  return teacherRepository.findAll(limit, offset);
 };
 
 export const getTeacherById = async (id) => {

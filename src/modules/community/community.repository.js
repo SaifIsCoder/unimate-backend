@@ -2,14 +2,16 @@ import { pool } from "../../config/db.js";
 
 export const createPost = async (data, client = pool) => {
   const query = `
-    INSERT INTO community_posts (author_id, department_id, title, content)
-    VALUES ($1, $2, $3, $4) RETURNING *;
+    INSERT INTO community_posts (author_id, department_id, title, content, type, image_url)
+    VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
   `;
   const result = await client.query(query, [
     data.author_id,
     data.department_id,
     data.title,
     data.content,
+    data.type || "general",
+    data.image_url || null,
   ]);
   return result.rows[0];
 };
@@ -18,14 +20,17 @@ export const getPostsByDepartment = async (
   departmentId,
   limit = 20,
   offset = 0,
+  userId = null
 ) => {
   const query = `
     SELECT 
       cp.*,
       u.email as author_email,
+      u.name as author_name,
       u.role as author_role,
       COUNT(DISTINCT pl.id) as like_count,
-      COUNT(DISTINCT pc.id) as comment_count
+      COUNT(DISTINCT pc.id) as comment_count,
+      EXISTS(SELECT 1 FROM post_likes pl2 WHERE pl2.post_id = cp.id AND pl2.user_id = $4) as liked
     FROM community_posts cp
     JOIN users u ON u.id = cp.author_id
     LEFT JOIN post_likes pl ON pl.post_id = cp.id
@@ -35,24 +40,26 @@ export const getPostsByDepartment = async (
     ORDER BY cp.created_at DESC
     LIMIT $2 OFFSET $3;
   `;
-  const result = await pool.query(query, [departmentId, limit, offset]);
+  const result = await pool.query(query, [departmentId, limit, offset, userId]);
   return result.rows;
 };
 
-export const getPostById = async (id, client = pool) => {
+export const getPostById = async (id, userId = null, client = pool) => {
   const query = `
     SELECT 
       cp.*,
       u.email as author_email,
+      u.name as author_name,
       u.role as author_role,
-      COUNT(DISTINCT pl.id) as like_count
+      COUNT(DISTINCT pl.id) as like_count,
+      EXISTS(SELECT 1 FROM post_likes pl2 WHERE pl2.post_id = cp.id AND pl2.user_id = $2) as liked
     FROM community_posts cp
     JOIN users u ON u.id = cp.author_id
     LEFT JOIN post_likes pl ON pl.post_id = cp.id
     WHERE cp.id = $1 AND cp.status != 'deleted'
     GROUP BY cp.id, u.id;
   `;
-  const result = await client.query(query, [id]);
+  const result = await client.query(query, [id, userId]);
   return result.rows[0] || null;
 };
 
@@ -102,6 +109,7 @@ export const getCommentsByPostId = async (postId, { page = 1, limit = 50 } = {})
     SELECT 
       pc.*,
       u.email as author_email,
+      u.name as author_name,
       u.role as author_role
     FROM post_comments pc
     JOIN users u ON u.id = pc.author_id

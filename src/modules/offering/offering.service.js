@@ -3,6 +3,7 @@ import { omitUndefined } from "../../utils/sql.helpers.js";
 import * as courseRepository from "../course/course.repository.js";
 import * as teacherRepository from "../teacher/teacher.repository.js";
 import * as offeringRepository from "./offering.repository.js";
+import { getPagination } from "../../utils/pagination.js";
 
 const assertCourseExists = async (courseId) => {
   const course = await courseRepository.findById(courseId);
@@ -61,7 +62,8 @@ export const createOffering = async (payload) => {
 };
 
 export const getOfferings = async (filters = {}) => {
-  return offeringRepository.findAll(filters);
+  const { page, limit, offset } = getPagination(filters);
+  return offeringRepository.findAll(filters, limit, offset);
 };
 
 export const getOfferingById = async (id) => {

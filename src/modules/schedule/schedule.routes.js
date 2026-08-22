@@ -35,6 +35,12 @@ router.get(
 );
 
 router.get(
+  "/my/today",
+  roleMiddleware([STUDENT]),
+  asyncHandler(scheduleController.getMyTodaySchedule)
+);
+
+router.get(
   "/",
   roleMiddleware([STUDENT]),
   validate({ query: validation.myScheduleQuery }),

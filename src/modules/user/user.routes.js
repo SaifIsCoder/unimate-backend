@@ -8,6 +8,7 @@ import * as controller from "./user.controller.js";
 import {
   createUserBody,
   emptyQuery,
+  listQuery,
   idParams,
   updateUserBody,
 } from "./user.validation.js";
@@ -29,7 +30,7 @@ router.post(
 );
 router.get(
   "/",
-  validate({ query: emptyQuery }),
+  validate({ query: listQuery }),
   asyncHandler(controller.getUsers),
 );
 router.get(

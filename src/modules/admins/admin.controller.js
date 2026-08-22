@@ -2,7 +2,7 @@ import * as adminService from "./admin.service.js";
 import { sendSuccess } from "../../utils/response.js";
 
 export const getAdmins = async (req, res) => {
-  const admins = await adminService.getAdmins();
+  const admins = await adminService.getAdmins(req.query);
   return sendSuccess(res, admins);
 };
 

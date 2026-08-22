@@ -9,7 +9,7 @@ export const create = async (data) => {
   return result.rows[0];
 };
 
-export const findAll = async (filters = {}) => {
+export const findAll = async (filters = {}, limit = 20, offset = 0) => {
   const conditions = [];
   const values = [];
 
@@ -24,6 +24,12 @@ export const findAll = async (filters = {}) => {
   }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  
+  // Clone values array for the count query before adding limit/offset
+  const countValues = [...values];
+  
+  values.push(limit, offset);
+  
   const result = await pool.query(
     `SELECT co.*, c.code AS course_code, c.title AS course_title,
             t.id AS teacher_profile_id, u.email AS teacher_email
@@ -32,11 +38,22 @@ export const findAll = async (filters = {}) => {
      LEFT JOIN teachers t ON t.id = co.teacher_id
      LEFT JOIN users u ON u.id = t.user_id
      ${whereClause}
-     ORDER BY co.id DESC`,
+     ORDER BY co.id DESC
+     LIMIT $${values.length - 1} OFFSET $${values.length}`,
     values
   );
 
-  return result.rows;
+  const countResult = await pool.query(`SELECT COUNT(*)::int as total FROM course_offerings co ${whereClause}`, countValues);
+  const total = countResult.rows[0].total;
+
+  return {
+    data: result.rows,
+    meta: {
+      total,
+      limit,
+      page: Math.floor(offset / limit) + 1
+    }
+  };
 };
 
 export const findById = async (id) => {

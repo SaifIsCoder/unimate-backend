@@ -10,6 +10,7 @@ import * as adminRepository from "../admins/admin.repository.js";
 import { pool } from "../../config/db.js";
 import * as gradesRepository from "../grades/grades.repository.js";
 import * as academicRules from "../../utils/academic-rules.js";
+import { getPagination } from "../../utils/pagination.js";
 
 const sanitizeUser = (user) => {
   if (!user) return null;
@@ -66,8 +67,9 @@ export const createUser = async (payload, requester) => {
   });
 };
 
-export const getUsers = async () => {
-  return userRepository.findAll();
+export const getUsers = async (query = {}) => {
+  const { page, limit, offset } = getPagination(query);
+  return userRepository.findAll(limit, offset);
 };
 
 export const getUserById = async (id) => {
@@ -186,18 +188,28 @@ export const getMe = async (userId) => {
       const attendance = await getStudentOverallAttendanceHelper(student.id);
 
       return {
-        name: displayNameFromEmail(user.email),
+        id: user.id,
+        role: user.role,
+        name: user.name || displayNameFromEmail(user.email),
         registrationNumber: student.roll_number,
         cgpa: Number(transcript.cgpa.toFixed(2)) || 0.0,
         creditsEnrolled: transcript.total_credit_hours || 0,
         averageAttendance: attendance.averageAttendance || 0.0,
+        program: student.program || "",
+        session: student.session || "",
+        section: student.section || "",
+        gender: student.gender || "",
+        dob: student.date_of_birth ? student.date_of_birth.toISOString().split("T")[0] : null,
+        semester: student.current_semester || null,
+        department: student.department?.name || "",
         personal: {
           email: user.email,
           phone: student.phone || "",
           address: student.address || "",
         },
         guardian: {
-          fatherName: student.father_name || "",
+          name: student.father_name || "",
+          relation: student.guardian_relation || "Father",
           phone: student.guardian_phone || "",
           emergencyPhone: student.emergency_phone || "",
         },
@@ -209,7 +221,9 @@ export const getMe = async (userId) => {
     const teacher = await teacherRepository.findByUserId(userId);
 
     return {
-      name: displayNameFromEmail(user.email),
+      id: user.id,
+      role: user.role,
+      name: user.name || displayNameFromEmail(user.email),
       employeeId: teacher?.employee_id || "",
       departmentId: teacher?.department_id ?? null,
       personal: {
@@ -223,7 +237,9 @@ export const getMe = async (userId) => {
     const admin = await adminRepository.findByUserId(userId);
 
     return {
-      name: displayNameFromEmail(user.email),
+      id: user.id,
+      role: user.role,
+      name: user.name || displayNameFromEmail(user.email),
       adminId: admin?.admin_id || "",
       // Admins are department-scoped for announcements and community
       // moderation, so the client needs to know which department that is.

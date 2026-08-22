@@ -25,6 +25,38 @@ const getUserDepartment = async (userId, role) => {
   return null;
 };
 
+/**
+ * Roles permitted to moderate other people's content.
+ *
+ * Teachers are included so they can police their own department's feed —
+ * previously only admins could, which left teachers with no way to act on
+ * anything in a community they are responsible for. Students never moderate;
+ * they may only edit or remove their own posts and comments.
+ */
+const isModerator = (role) => isAdmin(role) || role === TEACHER;
+
+/**
+ * Throws unless `user` may moderate content belonging to `departmentId`.
+ *
+ * Fails closed when either side is null. `community_posts.department_id` is
+ * nullable and so is a user's department, and the previous inline check
+ * (`post.department_id !== department`) treated `null !== null` as a match —
+ * so a moderator with no department could act on a department-less post. An
+ * absent department is not a shared one.
+ */
+const assertModeratesDepartment = async (departmentId, user) => {
+  const department = await getUserDepartment(user.id, user.role);
+
+  const sameDepartment =
+    department != null &&
+    departmentId != null &&
+    String(departmentId) === String(department);
+
+  if (!sameDepartment) {
+    throw new AppError("Forbidden: Cannot moderate outside your department", 403);
+  }
+};
+
 export const createPost = async (payload, user) => {
   const department = await getUserDepartment(user.id, user.role);
   if (!department) {
@@ -36,8 +68,9 @@ export const createPost = async (payload, user) => {
     department_id: department,
     title: sanitizeHtml(payload.title),
     content: sanitizeHtml(payload.content),
+    type: payload.type || "general",
+    image_url: payload.image_url || null,
   });
-
 
   return post;
 };
@@ -57,7 +90,7 @@ export const getPosts = async (query, user) => {
 };
 
 export const getPostById = async (id, user, options = {}) => {
-  const post = await communityRepo.getPostById(id);
+  const post = await communityRepo.getPostById(id, user.id);
   if (!post) throw new AppError("Post not found", 404);
 
   const department = await getUserDepartment(user.id, user.role);
@@ -77,15 +110,11 @@ export const updatePost = async (id, payload, user) => {
   const post = await communityRepo.getPostById(id);
   if (!post) throw new AppError("Post not found", 404);
 
-  // Admin moderation (hide)
-  if (isAdmin(user.role) && payload.status) {
-    const department = await getUserDepartment(user.id, user.role);
-    if (post.department_id !== department) {
-      throw new AppError(
-        "Forbidden: Cannot moderate outside your department",
-        403,
-      );
-    }
+  // Moderation: a teacher or admin changing a post's status inside their own
+  // department. Only `status` is applied here — a moderator hides or removes
+  // content, they do not rewrite someone else's words.
+  if (payload.status && isModerator(user.role)) {
+    await assertModeratesDepartment(post.department_id, user);
     return communityRepo.updatePost(id, { status: payload.status });
   }
 
@@ -110,23 +139,26 @@ export const deletePost = async (id, user) => {
   const post = await communityRepo.getPostById(id);
   if (!post) throw new AppError("Post not found", 404);
 
-  if (isAdmin(user.role)) {
-    const department = await getUserDepartment(user.id, user.role);
-    if (post.department_id !== department) {
-      throw new AppError(
-        "Forbidden: Cannot moderate outside your department",
-        403,
-      );
-    }
-    // Admin moderation defaults to 'hidden' or 'deleted' based on preference, we use 'deleted' for endpoint /delete
+  // Authorship is checked first so someone can always remove their own post,
+  // whatever their role. Previously a staff author whose department had since
+  // changed hit the moderation branch and was refused their own content.
+  if (String(post.author_id) === String(user.id)) {
     return communityRepo.updatePost(id, { status: "deleted" });
   }
 
-  if (String(post.author_id) !== String(user.id)) {
-    throw new AppError("Forbidden: You can only delete your own posts", 403);
+  // Otherwise only a teacher or admin, and only within their own department.
+  //
+  // Soft delete: the row survives with status 'deleted', so nothing cascades
+  // away and the data is recoverable in the database. It is NOT reversible
+  // through the API though — getPostById filters out deleted rows, so every
+  // subsequent request 404s. Prefer 'hidden' via PATCH when the intent is
+  // temporary.
+  if (isModerator(user.role)) {
+    await assertModeratesDepartment(post.department_id, user);
+    return communityRepo.updatePost(id, { status: "deleted" });
   }
 
-  return communityRepo.updatePost(id, { status: 'deleted' });
+  throw new AppError("Forbidden: You can only delete your own posts", 403);
 };
 
 export const createComment = async (postId, payload, user) => {
@@ -179,16 +211,17 @@ export const updateComment = async (id, payload, user) => {
   const comment = await communityRepo.getCommentById(id);
   if (!comment) throw new AppError("Comment not found", 404);
 
-  // For Admin Moderation
-  if (isAdmin(user.role) && payload.status) {
+  // Moderation: a teacher or admin changing a comment's status inside their own
+  // department. A moderator who can hide a post but not an abusive comment on
+  // it only has half a tool, so comments follow the same rule.
+  if (payload.status && isModerator(user.role)) {
     const post = await communityRepo.getPostById(comment.post_id);
-    const department = await getUserDepartment(user.id, user.role);
-    if (post.department_id !== department) {
-      throw new AppError(
-        "Forbidden: Cannot moderate outside your department",
-        403,
-      );
-    }
+    // A comment on a soft-deleted post: getPostById filters those out, so the
+    // parent may be missing. Treat it as unmoderatable rather than crashing on
+    // a null dereference, which is what the previous code did.
+    if (!post) throw new AppError("Parent post not found", 404);
+
+    await assertModeratesDepartment(post.department_id, user);
     return communityRepo.updateComment(id, { status: payload.status });
   }
 
@@ -209,20 +242,21 @@ export const deleteComment = async (id, user) => {
   const comment = await communityRepo.getCommentById(id);
   if (!comment) throw new AppError("Comment not found", 404);
 
-  if (isAdmin(user.role)) {
+  // Authorship first, so anyone can always remove their own comment — including
+  // staff whose department no longer matches the post's.
+  if (String(comment.author_id) === String(user.id)) {
+    return communityRepo.updateComment(id, { status: "deleted" });
+  }
+
+  if (isModerator(user.role)) {
     const post = await communityRepo.getPostById(comment.post_id);
-    const department = await getUserDepartment(user.id, user.role);
-    if (post.department_id !== department) {
-      throw new AppError("Forbidden: Cannot moderate outside your department", 403);
-    }
-    return communityRepo.updateComment(id, { status: 'deleted' });
+    if (!post) throw new AppError("Parent post not found", 404);
+
+    await assertModeratesDepartment(post.department_id, user);
+    return communityRepo.updateComment(id, { status: "deleted" });
   }
 
-  if (String(comment.author_id) !== String(user.id)) {
-    throw new AppError("Forbidden: You can only delete your own comments", 403);
-  }
-
-  return communityRepo.updateComment(id, { status: 'deleted' });
+  throw new AppError("Forbidden: You can only delete your own comments", 403);
 };
 
 export const likePost = async (postId, user) => {

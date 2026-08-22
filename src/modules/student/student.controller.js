@@ -7,7 +7,7 @@ export const createStudent = async (req, res) => {
 };
 
 export const getStudents = async (req, res) => {
-  const students = await studentService.getStudents();
+  const students = await studentService.getStudents(req.query);
   return sendSuccess(res, students);
 };
 

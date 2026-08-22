@@ -7,7 +7,7 @@ export const createCourse = async (req, res) => {
 };
 
 export const getCourses = async (req, res) => {
-  const courses = await courseService.getCourses();
+  const courses = await courseService.getCourses(req.query);
   return sendSuccess(res, courses);
 };
 

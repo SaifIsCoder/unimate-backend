@@ -2,8 +2,8 @@ import { pool } from "../../config/db.js";
 
 export const createAnnouncement = async (data, client = pool) => {
   const query = `
-    INSERT INTO announcements (author_id, title, content, department_id, semester)
-    VALUES ($1, $2, $3, $4, $5) RETURNING *;
+    INSERT INTO announcements (author_id, title, content, department_id, semester, type, image_url)
+    VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;
   `;
   const result = await client.query(query, [
     data.author_id,
@@ -11,6 +11,8 @@ export const createAnnouncement = async (data, client = pool) => {
     data.content,
     data.department_id || null,
     data.semester || null,
+    data.type || "general",
+    data.image_url || null,
   ]);
   return result.rows[0];
 };

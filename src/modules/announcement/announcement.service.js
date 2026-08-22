@@ -105,6 +105,8 @@ export const createAnnouncement = async (payload, user) => {
         content: sanitizeHtml(payload.content),
         department_id: payload.department_id,
         semester: payload.semester,
+        type: payload.type,
+        image_url: payload.image_url,
         author_id: user.id,
       },
       client,
@@ -173,6 +175,8 @@ const attachReadStatus = async (result, userId) => {
     data: result.data.map((announcement) => ({
       ...announcement,
       is_read: readIds.has(announcement.id),
+      scope: announcement.department_id ? 'department' : (announcement.semester ? 'semester' : 'class'),
+      message: announcement.content,
     })),
   };
 };

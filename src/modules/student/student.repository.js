@@ -13,15 +13,28 @@ export const createWithClient = async (client, data) => {
   const result = await client.query(query.text, query.values);
   return result.rows[0];
 };
-export const findAll = async (client = pool) => {
+export const findAll = async (limit = 20, offset = 0, client = pool) => {
   const result = await client.query(
     `SELECT s.*, u.email, u.role, d.name AS department_name, d.code AS department_code
      FROM students s
      JOIN users u ON u.id = s.user_id
      LEFT JOIN departments d ON d.id = s.department_id
-     ORDER BY s.id DESC`,
+     ORDER BY s.id DESC
+     LIMIT $1 OFFSET $2`,
+     [limit, offset]
   );
-  return result.rows;
+  
+  const countResult = await client.query(`SELECT COUNT(*)::int as total FROM students`);
+  const total = countResult.rows[0].total;
+
+  return {
+    data: result.rows,
+    meta: {
+      total,
+      limit,
+      page: Math.floor(offset / limit) + 1
+    }
+  };
 };
 
 export const findById = async (id, client = pool) => {

@@ -3,6 +3,7 @@ import { AppError } from "../../utils/app-error.js";
 import { omitUndefined } from "../../utils/sql.helpers.js";
 import * as adminRepository from "./admin.repository.js";
 import * as userRepository from "../user/user.repository.js";
+import { getPagination } from "../../utils/pagination.js";
 
 const assertAdminUser = async (userId) => {
   const user = await userRepository.findById(userId);
@@ -31,8 +32,9 @@ export const createAdmin = async (payload) => {
 };
 
 // get a admins
-export const getAdmins = async () => {
-  return adminRepository.findAll();
+export const getAdmins = async (query = {}) => {
+  const { page, limit, offset } = getPagination(query);
+  return adminRepository.findAll(limit, offset);
 };
 
 export const getAdminById = async (id) => {

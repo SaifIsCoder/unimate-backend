@@ -11,6 +11,7 @@ model User {
   id              String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   email           String          @unique
   passwordHash    String          @map("password_hash")
+  name            String?
   role            String
   isActive        Boolean?        @default(true) @map("is_active")
   createdAt       DateTime?       @default(now()) @map("created_at") @db.Timestamp(6)
@@ -56,10 +57,17 @@ model Student {
   createdAt      DateTime?           @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt      DateTime            @default(now()) @map("updated_at") @db.Timestamp(6)
   departmentId   Int?                @map("department_id")
+  program        String?
+  session        String?
+  section        String?
+  gender         String?
+  dateOfBirth    DateTime?           @map("date_of_birth") @db.Date
+  currentSemester Int?               @map("current_semester")
   phone          String?
   address        String?
   fatherName     String?             @map("father_name")
   guardianPhone  String?             @map("guardian_phone")
+  guardianRelation String?           @map("guardian_relation")
   emergencyPhone String?             @map("emergency_phone")
   targetCgpa     Decimal?            @default(3.0) @map("target_cgpa") @db.Decimal
   studyIntensity String?             @default("balanced") @map("study_intensity")
@@ -308,6 +316,8 @@ model Announcement {
   authorId        String                 @map("author_id") @db.Uuid
   title           String
   content         String
+  type            String?                @default("general")
+  imageUrl        String?                @map("image_url")
   offeringId      String?                @map("offering_id") @db.Uuid
   createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
   semester        String?
@@ -339,6 +349,7 @@ model Event {
   id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   title       String
   description String?
+  category    String?   @default("general")
   date        DateTime  @db.Timestamp(6)
   location    String?
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
@@ -364,6 +375,9 @@ model Notification {
   id          String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   userId      String   @map("user_id") @db.Uuid
   type        String
+  priority    String?  @default("LOW")
+  scope       String?
+  entityType  String?  @map("entity_type")
   title       String
   message     String
   referenceId String?  @map("reference_id") @db.Uuid
@@ -382,6 +396,8 @@ model CommunityPost {
   authorId     String        @map("author_id") @db.Uuid
   title        String
   content      String
+  type         String?       @default("general")
+  imageUrl     String?       @map("image_url")
   status       String        @default("active")
   createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt    DateTime      @default(now()) @map("updated_at") @db.Timestamp(6)

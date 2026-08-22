@@ -21,6 +21,7 @@ import communityRoutes from "../modules/community/community.routes.js";
 import departmentRoutes from "../modules/department/department.routes.js";
 import aiRoutes from "../modules/ai/ai.routes.js";
 import eventRoutes from "../modules/events/events.routes.js";
+import uploadRoutes from "../modules/upload/upload.routes.js";
 import { sendSuccess } from "../utils/response.js";
 
 const router = express.Router();
@@ -54,5 +55,6 @@ router.use("/community", communityRoutes);
 router.use("/departments", departmentRoutes);
 router.use("/ai", aiRoutes);
 router.use("/events", eventRoutes);
+router.use("/uploads", uploadRoutes);
 
 export default router;

@@ -40,6 +40,33 @@ async function main() {
     });
   }
 
+  const user2 = await prisma.user.upsert({
+    where: { email: 'superadmin2@unimate.com' },
+    update: { 
+      passwordHash: hashedPassword, 
+      role: 'super_admin' 
+    },
+    create: {
+      email: 'superadmin2@unimate.com',
+      passwordHash: hashedPassword,
+      role: 'super_admin',
+      isActive: true,
+      admin: {
+        create: {
+          adminId: 'SUPER-002',
+          departmentId: sysDept.id
+        }
+      }
+    },
+  });
+
+  if (user2.role === 'super_admin') {
+    await prisma.admin.updateMany({
+      where: { userId: user2.id },
+      data: { departmentId: sysDept.id }
+    });
+  }
+
   const student = await prisma.user.upsert({
     where: { email: 'student@university.edu' },
     update: { 
@@ -69,6 +96,7 @@ async function main() {
   }
 
   console.log('Created super admin:', user.email);
+  console.log('Created super admin 2:', user2.email);
   console.log('Created student:', student.email);
 }
 

@@ -27,8 +27,9 @@ const globalLimiter = rateLimit({
   message: "Too many requests from this IP, please try again after 15 minutes"
 });
 
+app.use(cors({ origin: env.frontendUrl }));
 app.use(helmet());
-app.use(globalLimiter);
+// app.use(globalLimiter); // Commented out for now to prevent 429 during dev
 app.use(requestIdMiddleware);
 app.use(
   pinoHttp({
@@ -44,7 +45,6 @@ app.use(
     },
   })
 );
-app.use(cors({ origin: env.frontendUrl }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

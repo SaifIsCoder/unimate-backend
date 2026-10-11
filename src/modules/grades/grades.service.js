@@ -25,7 +25,7 @@ export const submitGrade = async (payload, user) => {
     if (!offering) throw new AppError("Offering not found", 404);
 
     if (user) {
-      await authHelpers.assertAccessToOffering(user, offering);
+      await authHelpers.assertAccessToOffering(user, offering, client);
     }
 
     const enrollment = await enrollmentRepository.findByStudentAndOffering(
@@ -127,69 +127,66 @@ export const calculateCourseGrade = async (studentId, offeringId, user) => {
     }
   }
 
-  return withTransaction(async (client) => {
-    const grades = await gradesRepository.findGradesByStudentAndOffering(
-      studentId,
-      offeringId,
-      client,
-    );
+  const grades = await gradesRepository.findGradesByStudentAndOffering(
+    studentId,
+    offeringId,
+  );
 
-    let midScore = 0;
-    let sessionalScore = 0; // Accumulated from assignments and direct sessional entries
-    let sessionalMax = 0;
-    let finalScore = 0;
-    let practicalScore = 0;
+  let midScore = 0;
+  let sessionalScore = 0; // Accumulated from assignments and direct sessional entries
+  let sessionalMax = 0;
+  let finalScore = 0;
+  let practicalScore = 0;
 
-    grades.forEach((g) => {
-      const percentage = (Number(g.score) / Number(g.max_score)) * 100; // normalized to 100
+  grades.forEach((g) => {
+    const percentage = (Number(g.score) / Number(g.max_score)) * 100; // normalized to 100
 
-      if (g.assessment_type === "midterm") midScore = percentage;
-      else if (g.assessment_type === "final") finalScore = percentage;
-      else if (g.assessment_type === "practical") practicalScore = percentage;
-      else if (
-        g.assessment_type === "sessional" ||
-        g.assessment_type === "assignment" ||
-        g.assessment_type === "quiz" ||
-        g.assessment_type === "presentation" ||
-        g.assessment_type === "project"
-      ) {
-        sessionalScore += Number(g.score);
-        sessionalMax += Number(g.max_score);
-      }
-    });
-
-    let sessionalPercentage = 0;
-    if (sessionalMax > 0) {
-      sessionalPercentage = (sessionalScore / sessionalMax) * 100;
+    if (g.assessment_type === "midterm") midScore = percentage;
+    else if (g.assessment_type === "final") finalScore = percentage;
+    else if (g.assessment_type === "practical") practicalScore = percentage;
+    else if (
+      g.assessment_type === "sessional" ||
+      g.assessment_type === "assignment" ||
+      g.assessment_type === "quiz" ||
+      g.assessment_type === "presentation" ||
+      g.assessment_type === "project"
+    ) {
+      sessionalScore += Number(g.score);
+      sessionalMax += Number(g.max_score);
     }
-
-    const rawMarks = academicRules.calculateRawMarks(
-      {
-        midTerm: midScore,
-        sessional: sessionalPercentage,
-        finalExam: finalScore,
-        practical: practicalScore,
-      },
-      offering
-    );
-
-    const finalMarks = Math.ceil(rawMarks);
-    const { grade, gp } = academicRules.getGradePointDetails(finalMarks);
-
-    return {
-      raw_marks: rawMarks,
-      final_marks: finalMarks,
-      letter_grade: grade,
-      grade_point: gp,
-      has_practical: hasPractical,
-      components: {
-        mid_term: midScore,
-        sessional: sessionalPercentage,
-        final_exam: finalScore,
-        practical: practicalScore,
-      },
-    };
   });
+
+  let sessionalPercentage = 0;
+  if (sessionalMax > 0) {
+    sessionalPercentage = (sessionalScore / sessionalMax) * 100;
+  }
+
+  const rawMarks = academicRules.calculateRawMarks(
+    {
+      midTerm: midScore,
+      sessional: sessionalPercentage,
+      finalExam: finalScore,
+      practical: practicalScore,
+    },
+    offering
+  );
+
+  const finalMarks = Math.ceil(rawMarks);
+  const { grade, gp } = academicRules.getGradePointDetails(finalMarks);
+
+  return {
+    raw_marks: rawMarks,
+    final_marks: finalMarks,
+    letter_grade: grade,
+    grade_point: gp,
+    has_practical: hasPractical,
+    components: {
+      mid_term: midScore,
+      sessional: sessionalPercentage,
+      final_exam: finalScore,
+      practical: practicalScore,
+    },
+  };
 };
 
 export const getStudentTranscript = async (studentId, user) => {

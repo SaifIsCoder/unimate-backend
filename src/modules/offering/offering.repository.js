@@ -23,6 +23,11 @@ export const findAll = async (filters = {}, limit = 20, offset = 0) => {
     conditions.push(`co.course_id = $${values.length}`);
   }
 
+  if (filters.department_id !== undefined && filters.department_id !== null) {
+    values.push(filters.department_id);
+    conditions.push(`c.department_id = $${values.length}`);
+  }
+
   const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   
   // Clone values array for the count query before adding limit/offset
@@ -43,7 +48,13 @@ export const findAll = async (filters = {}, limit = 20, offset = 0) => {
     values
   );
 
-  const countResult = await pool.query(`SELECT COUNT(*)::int as total FROM course_offerings co ${whereClause}`, countValues);
+  const countQuery = `
+    SELECT COUNT(*)::int as total 
+    FROM course_offerings co
+    JOIN courses c ON c.id = co.course_id 
+    ${whereClause}
+  `;
+  const countResult = await pool.query(countQuery, countValues);
   const total = countResult.rows[0].total;
 
   return {

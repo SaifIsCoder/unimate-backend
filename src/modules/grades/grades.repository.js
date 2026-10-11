@@ -3,7 +3,7 @@ import { pool } from "../../config/db.js";
 const TABLE = "grades";
 
 export const upsertGrade = async (data, client = pool) => {
-  if (data.assessment_type === "assignment" && data.reference_id) {
+  if (data.reference_id) {
     const query = `
       INSERT INTO ${TABLE} (enrollment_id, assessment_type, reference_id, title, score, max_score)
       VALUES ($1, $2, $3, $4, $5, $6)
@@ -24,14 +24,14 @@ export const upsertGrade = async (data, client = pool) => {
     const query = `
       INSERT INTO ${TABLE} (enrollment_id, assessment_type, reference_id, title, score, max_score)
       VALUES ($1, $2, $3, $4, $5, $6)
-      ON CONFLICT (enrollment_id, assessment_type) WHERE reference_id IS NULL AND assessment_type != 'assignment'
+      ON CONFLICT (enrollment_id, assessment_type) WHERE reference_id IS NULL
       DO UPDATE SET score = EXCLUDED.score, max_score = EXCLUDED.max_score, title = EXCLUDED.title
       RETURNING *;
     `;
     const result = await client.query(query, [
       data.enrollment_id,
       data.assessment_type,
-      data.reference_id || null,
+      null,
       data.title,
       data.score,
       data.max_score,

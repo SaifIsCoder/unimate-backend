@@ -162,3 +162,58 @@ export const findExceptionsByStudent = async (studentId, client = pool) => {
   const result = await client.query(query, [studentId]);
   return result.rows;
 };
+
+export const findTeacherScheduleConflicts = async (
+  teacherId,
+  dayOfWeek,
+  startTime,
+  endTime,
+  excludeScheduleId = null,
+  client = pool
+) => {
+  let query = `
+    SELECT s.*, co.semester, c.code AS course_code, c.title AS course_title
+    FROM schedules s
+    JOIN course_offerings co ON s.offering_id = co.id
+    JOIN courses c ON co.course_id = c.id
+    WHERE co.teacher_id = $1
+      AND s.day_of_week = $2
+      AND s.start_time < $4
+      AND s.end_time > $3
+  `;
+  const params = [teacherId, dayOfWeek, startTime, endTime];
+  if (excludeScheduleId) {
+    query += ` AND s.id != $5`;
+    params.push(excludeScheduleId);
+  }
+  const result = await client.query(query, params);
+  return result.rows;
+};
+
+export const findRoomScheduleConflicts = async (
+  room,
+  dayOfWeek,
+  startTime,
+  endTime,
+  excludeScheduleId = null,
+  client = pool
+) => {
+  if (!room) return [];
+  let query = `
+    SELECT s.*, co.semester, c.code AS course_code, c.title AS course_title
+    FROM schedules s
+    JOIN course_offerings co ON s.offering_id = co.id
+    JOIN courses c ON co.course_id = c.id
+    WHERE LOWER(s.room) = LOWER($1)
+      AND s.day_of_week = $2
+      AND s.start_time < $4
+      AND s.end_time > $3
+  `;
+  const params = [room, dayOfWeek, startTime, endTime];
+  if (excludeScheduleId) {
+    query += ` AND s.id != $5`;
+    params.push(excludeScheduleId);
+  }
+  const result = await client.query(query, params);
+  return result.rows;
+};

@@ -48,8 +48,8 @@ export const findById = async (id) => {
   return result.rows[0] || null;
 };
 
-export const findByEmail = async (email) => {
-  const result = await pool.query(`SELECT * FROM ${TABLE} WHERE LOWER(email) = LOWER($1)`, [email]);
+export const findByEmail = async (email, client = pool) => {
+  const result = await client.query(`SELECT * FROM ${TABLE} WHERE LOWER(email) = LOWER($1)`, [email]);
   return result.rows[0] || null;
 };
 

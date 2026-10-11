@@ -42,7 +42,7 @@ router.patch(
 
 router.delete(
   "/:id",
-  roleMiddleware([ADMIN]),
+  roleMiddleware([SUPER_ADMIN]),
   validate({ params: idParams }),
   asyncHandler(controller.deleteAdmin)
 );

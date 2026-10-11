@@ -33,7 +33,7 @@ export const createTeacher = async (payload) => {
 
 export const getTeachers = async (query = {}) => {
   const { page, limit, offset } = getPagination(query);
-  return teacherRepository.findAll(limit, offset);
+  return teacherRepository.findAll(limit, offset, query.department_id);
 };
 
 export const getTeacherById = async (id) => {
@@ -74,6 +74,16 @@ export const getTeacherOfferingsByUserId = async (userId) => {
   }
 
   return teacherRepository.getOfferings(teacher.id);
+};
+
+export const getMyAnalytics = async (userId) => {
+  const teacher = await teacherRepository.findByUserId(userId);
+
+  if (!teacher) {
+    throw new AppError("Teacher profile not found", 404);
+  }
+
+  return teacherRepository.getTeacherAnalyticsSummary(teacher.id);
 };
 
 export const updateTeacher = async (id, payload) => {

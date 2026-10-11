@@ -34,3 +34,8 @@ export const setPasswordBody = Joi.object({
 export const refreshTokenBody = Joi.object({
   refreshToken: Joi.string().required(),
 });
+
+export const changePasswordBody = Joi.object({
+  currentPassword: Joi.string().required(),
+  newPassword: strongPassword.required(),
+});

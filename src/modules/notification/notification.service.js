@@ -53,6 +53,53 @@ export const dispatchAnnouncementNotifications = async (announcement, userIds) =
   }
 };
 
+export const dispatchAssignmentNotifications = async (assignment, userIds) => {
+  if (!userIds || userIds.length === 0) return;
+
+  try {
+    const BATCH_SIZE = 500;
+    for (let i = 0; i < userIds.length; i += BATCH_SIZE) {
+      const batchUserIds = userIds.slice(i, i + BATCH_SIZE);
+      const dbPayload = batchUserIds.map((userId) => ({
+        user_id: userId,
+        type: "assignment",
+        title: `New Assignment: ${assignment.title}`,
+        message: (assignment.description || `New assignment due on ${new Date(assignment.due_date).toLocaleDateString()}`).substring(0, 100),
+        reference_id: assignment.id,
+      }));
+      await notificationRepo.bulkCreateNotifications(dbPayload);
+    }
+
+    const tokens = await notificationRepo.getFcmTokensForUsers(userIds);
+
+    if (tokens.length > 0 && isFirebaseReady()) {
+      const fcmPayload = {
+        notification: {
+          title: `New Assignment: ${assignment.title}`,
+          body: (assignment.description || `New assignment due on ${new Date(assignment.due_date).toLocaleDateString()}`).substring(0, 100),
+        },
+        data: {
+          type: "assignment",
+          reference_id: String(assignment.id),
+        },
+      };
+
+      for (let i = 0; i < tokens.length; i += 500) {
+        const batchTokens = tokens.slice(i, i + 500);
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens: batchTokens,
+          ...fcmPayload,
+        });
+        console.log(`[FCM] Successfully sent batch of ${response.successCount} notifications.`);
+      }
+    } else if (tokens.length > 0) {
+      console.warn("[FCM] Tokens exist but Firebase is not initialized. Skipping push notification.");
+    }
+  } catch (error) {
+    console.error("[Notification Service] Error dispatching assignment notifications:", error);
+  }
+};
+
 export const registerFcmToken = async (userId, token) => {
   return notificationRepo.registerFcmToken(userId, token);
 };

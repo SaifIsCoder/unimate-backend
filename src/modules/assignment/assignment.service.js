@@ -7,16 +7,18 @@ import * as studentRepository from "../student/student.repository.js";
 import * as enrollmentRepository from "../enrollment/enrollment.repository.js";
 import * as authHelpers from "../../utils/auth.helpers.js";
 import { logAudit } from "../../utils/audit.js";
+import * as notificationService from "../notification/notification.service.js";
 
 
 // Authorization helpers moved to src/utils/auth.helpers.js
 
 export const createAssignment = async (payload, user) => {
-  return withTransaction(async (client) => {
+  let result;
+  await withTransaction(async (client) => {
     const offering = await authHelpers.assertOfferingExists(payload.offering_id, client);
 
     if (user) {
-      await authHelpers.assertAccessToOffering(user, offering);
+      await authHelpers.assertAccessToOffering(user, offering, client);
     }
 
     if (new Date(payload.due_date) < new Date()) {
@@ -35,7 +37,7 @@ export const createAssignment = async (payload, user) => {
       throw new AppError("An assignment with this title and description already exists for this offering", 409);
     }
 
-    const result = await assignmentRepository.createAssignment(payload, client);
+    result = await assignmentRepository.createAssignment(payload, client);
     
     logAudit({
       action: "ASSIGNMENT_CREATED",
@@ -43,9 +45,25 @@ export const createAssignment = async (payload, user) => {
       targetId: result.id,
       metadata: { offeringId: payload.offering_id, title: payload.title }
     }, `Assignment ${payload.title} created for offering ${payload.offering_id}`);
-
-    return result;
   });
+
+  // Post-commit notification dispatch
+  try {
+    const enrollments = await enrollmentRepository.findByOffering(payload.offering_id, {});
+    const studentUserIds = enrollments.data
+      .filter((e) => e.status === "enrolled" && e.student_user_id)
+      .map((e) => e.student_user_id);
+
+    if (studentUserIds.length > 0) {
+      notificationService
+        .dispatchAssignmentNotifications(result, studentUserIds)
+        .catch((err) => console.error("[Notification Error] Failed to send assignment notification:", err));
+    }
+  } catch (error) {
+    console.error("[Notification Service] Failed to resolve students for assignment notification:", error);
+  }
+
+  return result;
 };
 
 export const getAssignmentsByOffering = async (offeringId, user) => {
@@ -305,6 +323,11 @@ export const getAssignmentDetails = async (assignmentId, user) => {
     const assignment = await assignmentRepository.findAssignmentById(assignmentId);
     if (!assignment) {
       throw new AppError("Assignment not found", 404);
+    }
+
+    if (user && user.role === "teacher") {
+      const offering = await authHelpers.assertOfferingExists(assignment.offering_id);
+      await authHelpers.assertAccessToOffering(user, offering);
     }
 
     return {

@@ -9,13 +9,26 @@ export const create = async (data) => {
   return result.rows[0];
 };
 
-export const findAll = async (limit = 20, offset = 0) => {
+export const findAll = async (limit = 20, offset = 0, departmentId = null) => {
+  const values = [limit, offset];
+  let whereClause = "";
+
+  if (departmentId !== null && departmentId !== undefined) {
+    whereClause = "WHERE id = $3";
+    values.push(departmentId);
+  }
+
   const result = await pool.query(
-    `SELECT * FROM ${TABLE} ORDER BY name ASC LIMIT $1 OFFSET $2`,
-    [limit, offset]
+    `SELECT * FROM ${TABLE} ${whereClause} ORDER BY name ASC LIMIT $1 OFFSET $2`,
+    values
   );
   
-  const countResult = await pool.query(`SELECT COUNT(*)::int as total FROM ${TABLE}`);
+  const countQuery = departmentId 
+    ? `SELECT COUNT(*)::int as total FROM ${TABLE} WHERE id = $1` 
+    : `SELECT COUNT(*)::int as total FROM ${TABLE}`;
+  const countValues = departmentId ? [departmentId] : [];
+
+  const countResult = await pool.query(countQuery, countValues);
   const total = countResult.rows[0].total;
 
   return {

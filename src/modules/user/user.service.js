@@ -28,7 +28,7 @@ export const createUser = async (payload, requester) => {
   }
 
   return withTransaction(async (client) => {
-    const existingUser = await userRepository.findByEmail(payload.email);
+    const existingUser = await userRepository.findByEmail(payload.email, client);
     if (existingUser) {
       throw new AppError("Email is already in use", 409);
     }
@@ -92,7 +92,9 @@ export const updateUser = async (id, payload) => {
   if (payload.email) {
     const emailOwner = await userRepository.findByEmail(payload.email);
 
-    if (emailOwner && Number(emailOwner.id) !== Number(id)) {
+    // FIX: UUID-safe comparison — compare as normalized lowercase strings,
+    // never convert to Number.
+    if (emailOwner && String(emailOwner.id).toLowerCase() !== String(id).toLowerCase()) {
       throw new AppError("Email is already in use", 409);
     }
   }
@@ -253,4 +255,3 @@ export const getMe = async (userId) => {
 
   return sanitizeUser(user);
 };
-

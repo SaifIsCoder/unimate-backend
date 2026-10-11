@@ -1,5 +1,6 @@
 import { sendError } from "../utils/response.js";
 import * as logger from "../config/logger.js";
+import env from "../config/env.js";
 
 const dbErrorMessages = {
   23505: "Record already exists",
@@ -16,27 +17,39 @@ export default (err, req, res, next) => {
 
   const isKnownDbError = Boolean(dbErrorMessages[err.code]);
   const statusCode = err.statusCode || (isKnownDbError ? 400 : 500);
-  
+
   // Production safe message
   const isOperational = err.isOperational || isKnownDbError;
-  const message = isOperational ? (dbErrorMessages[err.code] || err.message) : "Internal server error";
+  const message = isOperational
+    ? dbErrorMessages[err.code] || err.message
+    : "Internal server error";
 
-  // Development Logging
+  // Logging — never log tokens or auth headers
+  const logContext = {
+    method: req.method,
+    url: req.originalUrl,
+    statusCode,
+    requestId: req.id,
+    // Only include the error code, never the full query or params
+    ...(err.code ? { pgCode: err.code } : {}),
+  };
+
   if (statusCode >= 500 || !isOperational) {
-    logger.error(`[${req.method}] ${req.url} - ${statusCode}: ${err.message}`);
-    if (err.stack) {
-      logger.error(err.stack);
-    }
+    logger.error(
+      { ...logContext, err: { message: err.message, stack: err.stack } },
+      `Unhandled error: ${err.message}`
+    );
   } else {
-    // For expected 4xx errors, just a simple one-line warning
-    logger.warn(`[${req.method}] ${req.url} - ${statusCode}: ${err.message}`);
+    logger.warn(logContext, `[${req.method}] ${req.originalUrl} - ${statusCode}: ${err.message}`);
   }
 
+  // Never expose DB error codes or stack traces in production responses
   return sendError(
     res,
     message,
     statusCode,
     isOperational ? "OperationalError" : "InternalError",
-    err.code
+    // Only expose error code in development
+    env.isProduction ? undefined : err.code
   );
 };

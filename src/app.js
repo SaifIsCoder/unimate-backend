@@ -11,25 +11,43 @@ import { requestIdMiddleware } from "./middlewares/request-id.middleware.js";
 import { sendError, sendSuccess } from "./utils/response.js";
 import { AppError } from "./utils/app-error.js";
 
-
 const app = express();
 const API_PREFIX = "/api";
 const CURRENT_API_VERSION = "v1";
 const VERSIONED_API_PREFIX = `${API_PREFIX}/${CURRENT_API_VERSION}`;
 
-app.set("trust proxy", 1); // Trust proxy for accurate IP in rate limiting
+// ── Proxy trust ───────────────────────────────────────────────────────────────
+// Render terminates TLS at its load balancer and forwards X-Forwarded-* headers.
+// Trust exactly one proxy hop so that rate-limiter and req.ip work correctly.
+app.set("trust proxy", 1);
 
+// ── Global rate limiter ───────────────────────────────────────────────────────
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 100, // Limit each IP to 100 requests per `window`
+  limit: env.isProduction ? 300 : 1000, // generous in prod, very relaxed in dev
   standardHeaders: true,
   legacyHeaders: false,
-  message: "Too many requests from this IP, please try again after 15 minutes"
+  message: {
+    success: false,
+    error: {
+      message: "Too many requests from this IP, please try again after 15 minutes",
+      type: "RateLimitError",
+    },
+  },
 });
 
-app.use(cors({ origin: env.frontendUrl }));
+// ── CORS ──────────────────────────────────────────────────────────────────────
+const corsOptions = {
+  origin: env.isProduction
+    ? env.corsOrigins
+    : true, // allow all in development
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 app.use(helmet());
-// app.use(globalLimiter); // Commented out for now to prevent 429 during dev
+app.use(globalLimiter);
 app.use(requestIdMiddleware);
 app.use(
   pinoHttp({
@@ -42,14 +60,24 @@ app.use(
         query: req.query,
         id: req.id,
       }),
+      // Never log response bodies (may contain tokens)
+      res: (res) => ({
+        statusCode: res.statusCode,
+      }),
+    },
+    // Don't log health-check noise
+    autoLogging: {
+      ignore: (req) => req.url === "/api/v1/health" || req.url === "/health",
     },
   })
 );
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 // Serve static files from the 'public' directory
 app.use(express.static("public"));
+
+// ── Root / info routes ────────────────────────────────────────────────────────
 
 app.get("/", (req, res) => {
   return sendSuccess(res, {
@@ -62,6 +90,11 @@ app.get("/", (req, res) => {
   });
 });
 
+// Top-level health check (Render health-check path)
+app.get("/health", (req, res) => {
+  return sendSuccess(res, { status: "ok" });
+});
+
 app.get(API_PREFIX, (req, res) => {
   return sendSuccess(res, {
     versions: [CURRENT_API_VERSION],
@@ -72,12 +105,13 @@ app.get(API_PREFIX, (req, res) => {
 
 app.use(VERSIONED_API_PREFIX, routes);
 
+// ── 404 catch-all ─────────────────────────────────────────────────────────────
 
-
-// ... inside app ...
 app.use((req, res, next) => {
   next(new AppError("Route not found", 404));
 });
+
+// ── Centralised error handler ─────────────────────────────────────────────────
 
 app.use(errorMiddleware);
 

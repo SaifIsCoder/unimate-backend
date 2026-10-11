@@ -10,6 +10,7 @@ import * as enrollmentRepo from "../enrollment/enrollment.repository.js";
 import * as studentRepo from "../student/student.repository.js";
 import * as adminRepo from "../admins/admin.repository.js";
 import { sanitizeHtml } from "../../utils/sanitizer.js";
+import * as authHelpers from "../../utils/auth.helpers.js";
 
 // Called after the write transaction has committed, so it defaults to the pool.
 // The semester branch below queries `client` directly and has no fallback of its
@@ -77,7 +78,7 @@ export const createAnnouncement = async (payload, user) => {
       if (!payload.offering_ids || payload.offering_ids.length === 0) {
         throw new AppError("Teachers must target at least one offering", 403);
       }
-      const teacher = await teacherRepo.findByUserId(user.id);
+      const teacher = await teacherRepo.findByUserId(user.id, client);
       for (const oid of payload.offering_ids) {
         const offering = await offeringRepo.findPlainById(oid, client);
         if (!offering || String(offering.teacher_id) !== String(teacher.id)) {
@@ -90,7 +91,7 @@ export const createAnnouncement = async (payload, user) => {
     }
 
     if (isAdmin(user.role) && payload.department_id) {
-      const admin = await adminRepo.findByUserId(user.id);
+      const admin = await adminRepo.findByUserId(user.id, client);
       if (!admin || admin.department_id !== payload.department_id) {
         throw new AppError(
           "Forbidden: You can only post to your department",
@@ -186,6 +187,8 @@ export const getAnnouncements = async (query, user) => {
 
   let result;
   if (offering_id) {
+    const offering = await authHelpers.assertOfferingExists(offering_id);
+    await authHelpers.assertAccessToOffering(user, offering);
     result = await announcementRepo.getByOffering(offering_id, { page, limit });
   } else if (department_id) {
     result = await announcementRepo.getByDepartment(department_id, { page, limit });

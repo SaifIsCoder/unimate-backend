@@ -34,7 +34,7 @@ export const createStudent = async (payload) => {
 
 export const getStudents = async (query = {}) => {
   const { page, limit, offset } = getPagination(query);
-  return studentRepository.findAll(limit, offset);
+  return studentRepository.findAll(limit, offset, query.department_id);
 };
 
 export const getStudentById = async (id) => {

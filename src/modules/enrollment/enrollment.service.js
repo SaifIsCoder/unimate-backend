@@ -10,8 +10,8 @@ import { logAudit } from "../../utils/audit.js";
 
 const ACTIVE_ENROLLMENT_STATUSES = [ENROLLED];
 
-const assertStudentExists = async (studentId) => {
-  const student = await studentRepository.findById(studentId);
+const assertStudentExists = async (studentId, client) => {
+  const student = await studentRepository.findById(studentId, client);
 
   if (!student) {
     throw new AppError("Student not found", 404);
@@ -32,7 +32,7 @@ const assertOfferingExists = async (offeringId, client, options = {}) => {
 
 export const createEnrollment = async (payload, actor) => {
   return withTransaction(async (client) => {
-    await assertStudentExists(payload.student_id);
+    await assertStudentExists(payload.student_id, client);
     const offering = await assertOfferingExists(payload.offering_id, client, { forUpdate: true });
 
     const duplicateEnrollment = await enrollmentRepository.findByStudentAndOffering(
@@ -114,7 +114,7 @@ export const updateEnrollment = async (id, payload, actor) => {
     const targetStatus = payload.status ?? enrollment.status;
 
     if (payload.student_id) {
-      await assertStudentExists(payload.student_id);
+      await assertStudentExists(payload.student_id, client);
     }
 
     const offering = await assertOfferingExists(targetOfferingId, client, { forUpdate: true });

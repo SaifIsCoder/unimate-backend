@@ -7,7 +7,11 @@ export const createStudent = async (req, res) => {
 };
 
 export const getStudents = async (req, res) => {
-  const students = await studentService.getStudents(req.query);
+  const query = { ...req.query };
+  if (req.user?.role === "admin" && req.user?.department_id) {
+    query.department_id = req.user.department_id;
+  }
+  const students = await studentService.getStudents(query);
   return sendSuccess(res, students);
 };
 

@@ -23,7 +23,7 @@ export const createCourse = async (payload) => {
 
 export const getCourses = async (query = {}) => {
   const { page, limit, offset } = getPagination(query);
-  return courseRepository.findAll(limit, offset);
+  return courseRepository.findAll(limit, offset, query.department_id);
 };
 
 export const getCourseById = async (id) => {

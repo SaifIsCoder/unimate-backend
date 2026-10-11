@@ -7,7 +7,11 @@ export const createTeacher = async (req, res) => {
 };
 
 export const getTeachers = async (req, res) => {
-  const teachers = await teacherService.getTeachers(req.query);
+  const query = { ...req.query };
+  if (req.user?.role === "admin" && req.user?.department_id) {
+    query.department_id = req.user.department_id;
+  }
+  const teachers = await teacherService.getTeachers(query);
   return sendSuccess(res, teachers);
 };
 
@@ -29,6 +33,11 @@ export const getTeacherOfferings = async (req, res) => {
 export const getMyOfferings = async (req, res) => {
   const offerings = await teacherService.getTeacherOfferingsByUserId(req.user.id);
   return sendSuccess(res, offerings);
+};
+
+export const getMyAnalytics = async (req, res) => {
+  const analytics = await teacherService.getMyAnalytics(req.user.id);
+  return sendSuccess(res, analytics);
 };
 
 export const updateTeacher = async (req, res) => {

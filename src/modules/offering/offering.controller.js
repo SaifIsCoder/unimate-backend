@@ -7,7 +7,11 @@ export const createOffering = async (req, res) => {
 };
 
 export const getOfferings = async (req, res) => {
-  const offerings = await offeringService.getOfferings(req.query);
+  const query = { ...req.query };
+  if (req.user?.role === "admin" && req.user?.department_id) {
+    query.department_id = req.user.department_id;
+  }
+  const offerings = await offeringService.getOfferings(query);
   return sendSuccess(res, offerings);
 };
 

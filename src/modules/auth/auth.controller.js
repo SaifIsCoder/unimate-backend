@@ -49,3 +49,11 @@ export const getMe = async (req, res) => {
   const user = await userService.getMe(req.user.id);
   return sendSuccess(res, user);
 };
+
+export const changePassword = async (req, res) => {
+  const result = await authService.changePassword(req.user.id, {
+    currentPassword: req.body.currentPassword,
+    newPassword: req.body.newPassword,
+  });
+  return sendSuccess(res, result);
+};

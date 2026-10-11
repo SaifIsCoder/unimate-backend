@@ -24,6 +24,12 @@ router.get(
   validate({ query: emptyQuery }),
   asyncHandler(controller.getMyOfferings),
 );
+router.get(
+  "/me/analytics",
+  roleMiddleware([TEACHER]),
+  validate({ query: emptyQuery }),
+  asyncHandler(controller.getMyAnalytics),
+);
 
 // Admin-only routes
 router.get(

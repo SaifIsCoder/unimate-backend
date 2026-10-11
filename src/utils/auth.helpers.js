@@ -8,23 +8,24 @@ import * as enrollmentRepository from "../modules/enrollment/enrollment.reposito
 /**
  * Ensures a user has access to a specific course offering
  */
-export const assertAccessToOffering = async (user, offering) => {
+export const assertAccessToOffering = async (user, offering, client) => {
   if (isAdmin(user.role)) return;
 
   if (user.role === TEACHER) {
-    const teacher = await teacherRepository.findByUserId(user.id);
+    const teacher = await teacherRepository.findByUserId(user.id, client);
     if (!teacher || String(teacher.id) !== String(offering.teacher_id)) {
       throw new AppError("Forbidden: You do not own this offering", 403);
     }
   }
 
   if (user.role === STUDENT) {
-    const student = await studentRepository.findByUserId(user.id);
+    const student = await studentRepository.findByUserId(user.id, client);
     if (!student) throw new AppError("Student profile not found", 403);
 
     const enrollment = await enrollmentRepository.findByStudentAndOffering(
       student.id,
       offering.id,
+      client,
     );
     if (!enrollment || enrollment.status !== "enrolled") {
       throw new AppError(

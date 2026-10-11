@@ -7,7 +7,11 @@ export const createDepartment = async (req, res) => {
 };
 
 export const getDepartments = async (req, res) => {
-  const departments = await departmentService.getDepartments(req.query);
+  const query = { ...req.query };
+  if (req.user?.role === "admin" && req.user?.department_id) {
+    query.department_id = req.user.department_id;
+  }
+  const departments = await departmentService.getDepartments(query);
   return sendSuccess(res, departments);
 };
 

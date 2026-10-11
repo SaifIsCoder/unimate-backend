@@ -29,6 +29,13 @@ const authMiddleware = async (req, res, next) => {
       role: user.role,
     };
 
+    if (user.role === "admin") {
+      const adminRecord = await authRepository.findAdminByUserId(user.id);
+      if (adminRecord) {
+        req.user.department_id = adminRecord.department_id;
+      }
+    }
+
     return next();
   } catch {
     return next(new AppError("Invalid or expired authentication token", 401));

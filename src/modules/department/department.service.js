@@ -9,7 +9,7 @@ export const createDepartment = async (payload) => {
 
 export const getDepartments = async (query = {}) => {
   const { page, limit, offset } = getPagination(query);
-  return departmentRepository.findAll(limit, offset);
+  return departmentRepository.findAll(limit, offset, query.department_id);
 };
 
 export const getDepartmentById = async (id) => {

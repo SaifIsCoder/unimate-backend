@@ -9,17 +9,31 @@ export const create = async (data) => {
   return result.rows[0];
 };
 
-export const findAll = async (limit = 20, offset = 0) => {
+export const findAll = async (limit = 20, offset = 0, departmentId = null) => {
+  const values = [limit, offset];
+  let whereClause = "";
+
+  if (departmentId !== null && departmentId !== undefined) {
+    whereClause = "WHERE c.department_id = $3";
+    values.push(departmentId);
+  }
+
   const result = await pool.query(
     `SELECT c.*, d.name AS department_name, d.code AS department_code
      FROM courses c
      LEFT JOIN departments d ON d.id = c.department_id
+     ${whereClause}
      ORDER BY c.id DESC
      LIMIT $1 OFFSET $2`,
-     [limit, offset]
+     values
   );
   
-  const countResult = await pool.query(`SELECT COUNT(*)::int as total FROM courses`);
+  const countQuery = departmentId 
+    ? `SELECT COUNT(*)::int as total FROM courses WHERE department_id = $1` 
+    : `SELECT COUNT(*)::int as total FROM courses`;
+  const countValues = departmentId ? [departmentId] : [];
+  
+  const countResult = await pool.query(countQuery, countValues);
   const total = countResult.rows[0].total;
 
   return {

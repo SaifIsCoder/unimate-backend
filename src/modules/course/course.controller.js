@@ -7,7 +7,11 @@ export const createCourse = async (req, res) => {
 };
 
 export const getCourses = async (req, res) => {
-  const courses = await courseService.getCourses(req.query);
+  const query = { ...req.query };
+  if (req.user?.role === "admin" && req.user?.department_id) {
+    query.department_id = req.user.department_id;
+  }
+  const courses = await courseService.getCourses(query);
   return sendSuccess(res, courses);
 };
 

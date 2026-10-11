@@ -27,6 +27,13 @@ export const findTeacherByUserId = async (userId) => {
   return result.rows[0] || null;
 };
 
+export const findAdminByUserId = async (userId) => {
+  const result = await pool.query(`SELECT * FROM admins WHERE user_id = $1`, [
+    userId,
+  ]);
+  return result.rows[0] || null;
+};
+
 export const findStudentByEmailAndRollNumber = async (email, rollNumber) => {
   const result = await pool.query(
     `SELECT u.*, s.roll_number

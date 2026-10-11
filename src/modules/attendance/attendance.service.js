@@ -33,7 +33,7 @@ export const recordAttendance = async (payload, user) => {
     }
 
     if (user) {
-      await authHelpers.assertAccessToOffering(user, offering);
+      await authHelpers.assertAccessToOffering(user, offering, client);
     }
 
     const offeringId = offering.id;

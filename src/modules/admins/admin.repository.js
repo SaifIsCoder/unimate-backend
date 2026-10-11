@@ -39,8 +39,8 @@ export const findAll = async (limit = 20, offset = 0, client = pool) => {
   };
 };
 
-export const findById = async (id) => {
-  const result = await pool.query(
+export const findById = async (id, client = pool) => {
+  const result = await client.query(
     `SELECT a.*, u.email, u.role, u.is_active, d.name AS department_name, d.code AS department_code
      FROM admins a
      JOIN users u ON u.id = a.user_id
@@ -51,8 +51,8 @@ export const findById = async (id) => {
   return result.rows[0] || null;
 };
 
-export const findByUserId = async (userId) => {
-  const result = await pool.query(
+export const findByUserId = async (userId, client = pool) => {
+  const result = await client.query(
     `SELECT a.*, u.email, u.role, u.is_active, d.name AS department_name, d.code AS department_code
      FROM admins a
      JOIN users u ON u.id = a.user_id

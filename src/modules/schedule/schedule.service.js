@@ -20,7 +20,7 @@ const assertOwnsOffering = async (offeringId, user, client) => {
   const offering = await assertOfferingExists(offeringId, client);
 
   if (user) {
-    await authHelpers.assertAccessToOffering(user, offering);
+    await authHelpers.assertAccessToOffering(user, offering, client);
   }
 
   return offering;
@@ -28,9 +28,9 @@ const assertOwnsOffering = async (offeringId, user, client) => {
 
 export const createSchedule = async (payload, user) => {
   return withTransaction(async (client) => {
-    await assertOwnsOffering(payload.offering_id, user, client);
+    const offering = await assertOwnsOffering(payload.offering_id, user, client);
 
-    // Basic overlap check in service layer
+    // 1. Basic overlap check for this offering
     const existingSchedules = await scheduleRepository.findSchedulesByOffering(payload.offering_id, client);
     const hasOverlap = existingSchedules.some(
       (sch) =>
@@ -41,6 +41,44 @@ export const createSchedule = async (payload, user) => {
 
     if (hasOverlap) {
       throw new AppError("Schedule overlaps with an existing schedule for this offering on this day", 409);
+    }
+
+    // 2. Teacher double-booking check across all offerings taught by this teacher
+    if (offering.teacher_id) {
+      const teacherConflicts = await scheduleRepository.findTeacherScheduleConflicts(
+        offering.teacher_id,
+        payload.day_of_week,
+        payload.start_time,
+        payload.end_time,
+        null,
+        client
+      );
+      if (teacherConflicts.length > 0) {
+        const conflict = teacherConflicts[0];
+        throw new AppError(
+          `Schedule conflict: Teacher is already scheduled for ${conflict.course_code || "another class"} on ${payload.day_of_week} from ${conflict.start_time} to ${conflict.end_time}`,
+          409
+        );
+      }
+    }
+
+    // 3. Room collision check
+    if (payload.room) {
+      const roomConflicts = await scheduleRepository.findRoomScheduleConflicts(
+        payload.room,
+        payload.day_of_week,
+        payload.start_time,
+        payload.end_time,
+        null,
+        client
+      );
+      if (roomConflicts.length > 0) {
+        const conflict = roomConflicts[0];
+        throw new AppError(
+          `Room collision: Room ${payload.room} is already booked for ${conflict.course_code || "another class"} on ${payload.day_of_week} from ${conflict.start_time} to ${conflict.end_time}`,
+          409
+        );
+      }
     }
 
     return scheduleRepository.createSchedule(payload, client);

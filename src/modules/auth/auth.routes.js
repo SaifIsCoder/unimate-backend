@@ -10,16 +10,20 @@ import {
   refreshTokenBody,
   resetPasswordBody,
   setPasswordBody,
+  changePasswordBody,
 } from "./auth.validation.js";
 
 const router = express.Router();
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 5, // Limit each IP to 5 login requests per `window`
+  limit: process.env.NODE_ENV === "production" ? 5 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
-  message: "Too many login attempts from this IP, please try again after 15 minutes",
+  message: {
+    status: 429,
+    message: "Too many login attempts from this IP, please try again after 15 minutes",
+  },
 });
 
 router.post(
@@ -84,6 +88,13 @@ router.post(
   authMiddleware,
   validate({ query: emptyQuery, body: setPasswordBody }),
   asyncHandler(controller.setPassword),
+);
+
+router.post(
+  "/change-password",
+  authMiddleware,
+  validate({ query: emptyQuery, body: changePasswordBody }),
+  asyncHandler(controller.changePassword),
 );
 
 router.get(

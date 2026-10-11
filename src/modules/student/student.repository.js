@@ -13,18 +13,32 @@ export const createWithClient = async (client, data) => {
   const result = await client.query(query.text, query.values);
   return result.rows[0];
 };
-export const findAll = async (limit = 20, offset = 0, client = pool) => {
+export const findAll = async (limit = 20, offset = 0, departmentId = null, client = pool) => {
+  const values = [limit, offset];
+  let whereClause = "";
+
+  if (departmentId !== null && departmentId !== undefined) {
+    whereClause = "WHERE s.department_id = $3";
+    values.push(departmentId);
+  }
+
   const result = await client.query(
     `SELECT s.*, u.email, u.role, d.name AS department_name, d.code AS department_code
      FROM students s
      JOIN users u ON u.id = s.user_id
      LEFT JOIN departments d ON d.id = s.department_id
+     ${whereClause}
      ORDER BY s.id DESC
      LIMIT $1 OFFSET $2`,
-     [limit, offset]
+     values
   );
   
-  const countResult = await client.query(`SELECT COUNT(*)::int as total FROM students`);
+  const countQuery = departmentId
+    ? `SELECT COUNT(*)::int as total FROM students s WHERE s.department_id = $1`
+    : `SELECT COUNT(*)::int as total FROM students`;
+  const countValues = departmentId ? [departmentId] : [];
+
+  const countResult = await client.query(countQuery, countValues);
   const total = countResult.rows[0].total;
 
   return {

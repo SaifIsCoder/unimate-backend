@@ -9,17 +9,17 @@ import * as adminRepo from "../admins/admin.repository.js";
 import { sanitizeHtml } from "../../utils/sanitizer.js";
 
 
-const getUserDepartment = async (userId, role) => {
+const getUserDepartment = async (userId, role, client = pool) => {
   if (role === STUDENT) {
-    const student = await studentRepo.findByUserId(userId);
+    const student = await studentRepo.findByUserId(userId, client);
     return student?.department_id || null;
   }
   if (role === TEACHER) {
-    const teacher = await teacherRepo.findByUserId(userId);
+    const teacher = await teacherRepo.findByUserId(userId, client);
     return teacher?.department_id || null;
   }
   if (isAdmin(role)) {
-    const admin = await adminRepo.findByUserId(userId);
+    const admin = await adminRepo.findByUserId(userId, client);
     return admin?.department_id || null;
   }
   return null;
@@ -167,7 +167,7 @@ export const createComment = async (postId, payload, user) => {
     const post = await communityRepo.getPostById(postId, client);
     if (!post) throw new AppError("Post not found", 404);
 
-    const department = await getUserDepartment(user.id, user.role);
+    const department = await getUserDepartment(user.id, user.role, client);
     if (post.department_id !== department) {
       throw new AppError(
         "Forbidden: Cannot comment on posts outside your department",

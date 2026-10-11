@@ -13,8 +13,9 @@ const issueToken = (user) =>
     expiresIn: "1d",
   });
 
+
 const issueRefreshToken = (user) =>
-  jwt.sign({ id: user.id, role: user.role, type: "refresh" }, env.jwtSecret, {
+  jwt.sign({ id: user.id, role: user.role, type: "refresh" }, env.jwtRefreshSecret, {
     expiresIn: "7d",
   });
 
@@ -157,7 +158,7 @@ export const loginUnified = async ({ email, password }) => {
 
 export const refreshUnified = async (refreshToken) => {
   try {
-    const decoded = jwt.verify(refreshToken, env.jwtSecret);
+    const decoded = jwt.verify(refreshToken, env.jwtRefreshSecret);
     if (decoded.type !== "refresh") {
       throw new AppError("Invalid refresh token", 401);
     }
@@ -181,4 +182,23 @@ export const refreshUnified = async (refreshToken) => {
   } catch (error) {
     throw new AppError("Invalid or expired refresh token", 401);
   }
+};
+
+export const changePassword = async (userId, { currentPassword, newPassword }) => {
+  const user = await authRepository.findUserById(userId);
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  assertActive(user);
+
+  const valid = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!valid) {
+    throw new AppError("Current password is incorrect", 400);
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await authRepository.setPassword(userId, passwordHash);
+
+  return { message: "Password changed successfully" };
 };

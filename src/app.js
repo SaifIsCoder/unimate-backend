@@ -38,9 +38,22 @@ const globalLimiter = rateLimit({
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const corsOptions = {
-  origin: env.isProduction
-    ? env.corsOrigins
-    : true, // allow all in development
+  origin: (origin, callback) => {
+    // 1. Mobile apps, curl, and server-to-server requests don't send an Origin header -> allow
+    if (!origin) return callback(null, true);
+
+    // 2. Development mode or universal wildcard "*" configured -> allow and reflect origin (credentials-safe)
+    if (!env.isProduction || env.corsOrigins.includes("*")) {
+      return callback(null, true);
+    }
+
+    // 3. Specific whitelist match
+    if (env.corsOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+  },
   credentials: true,
   optionsSuccessStatus: 200,
 };
